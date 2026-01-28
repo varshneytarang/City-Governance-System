@@ -4,7 +4,7 @@ Matches PostgreSQL schema with additions for Water & Fire agents
 """
 from sqlalchemy import (
     Column, String, Integer, Numeric, Boolean, Date, DateTime, Text, 
-    ForeignKey, CheckConstraint, Index
+    ForeignKey, CheckConstraint, Index, Float
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
@@ -13,6 +13,61 @@ from sqlalchemy.sql import func
 import uuid
 
 Base = declarative_base()
+
+
+# ============= AGENT DECISION AUDIT TABLE (Professional Edition) =============
+
+class AgentDecision(Base):
+    """
+    Audit trail for all agent decisions
+    Stores complete decision context for explainability
+    """
+    __tablename__ = "agent_decisions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Agent metadata
+    agent_type = Column(String(50), nullable=False, index=True)  # water_department, fire_department, etc.
+    request_type = Column(String(100), nullable=False, index=True)
+    
+    # Request data
+    request_data = Column(JSONB, nullable=False)  # Original input event
+    context_snapshot = Column(JSONB)  # Context at decision time
+    
+    # Plan and execution
+    plan_attempted = Column(JSONB)  # Which plan was tried
+    tool_results = Column(JSONB)  # Tool execution results
+    
+    # Evaluation results
+    feasible = Column(Boolean)
+    feasibility_reason = Column(Text)
+    policy_compliant = Column(Boolean)
+    policy_violations = Column(JSONB)
+    
+    # Confidence
+    confidence = Column(Float)
+    confidence_factors = Column(JSONB)
+    
+    # Final decision
+    decision = Column(String(50), index=True)  # approved, denied, escalate
+    reasoning = Column(Text)
+    escalation_reason = Column(Text)
+    
+    # Response
+    response = Column(Text)
+    
+    # Metadata
+    created_at = Column(DateTime, default=func.current_timestamp(), index=True)
+    completed_at = Column(DateTime)
+    agent_version = Column(String(20))
+    execution_time_ms = Column(Integer)
+    retry_count = Column(Integer, default=0)
+    
+    # Indexes for querying
+    __table_args__ = (
+        Index('idx_agent_timestamp', 'agent_type', 'created_at'),
+        Index('idx_decision_type', 'decision', 'request_type'),
+    )
 
 
 # ============= CORE GOVERNANCE TABLES =============
@@ -56,7 +111,6 @@ class Project(Base):
     
     # Relationships
     department = relationship("Department", back_populates="projects")
-    agent_decisions = relationship("AgentDecision", back_populates="project")
     negotiation_logs = relationship("NegotiationLog", back_populates="project")
     
     __table_args__ = (
@@ -121,29 +175,6 @@ class Budget(Base):
     __table_args__ = (
         CheckConstraint('remaining_amount = allocated_amount - used_amount', name='budget_balance_check'),
         Index('idx_budget_department_year', 'department_id', 'fiscal_year'),
-    )
-
-
-class AgentDecision(Base):
-    __tablename__ = "agent_decisions"
-    
-    decision_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
-    agent_name = Column(Text, nullable=False)
-    related_project = Column(UUID(as_uuid=True), ForeignKey("projects.project_id", ondelete="SET NULL"))
-    
-    input_summary = Column(JSONB)
-    decision = Column(Text)
-    reasoning = Column(Text)
-    confidence = Column(Numeric)
-    
-    created_at = Column(DateTime, default=func.current_timestamp())
-    
-    # Relationships
-    project = relationship("Project", back_populates="agent_decisions")
-    
-    __table_args__ = (
-        Index('idx_decision_agent', 'agent_name'),
     )
 
 
@@ -412,3 +443,125 @@ class AgentMessage(Base):
         Index('idx_agent_message_priority', 'priority'),
         Index('idx_agent_message_sent', 'sent_at'),
     )
+
+
+# ============= PROFESSIONAL AGENT ARCHITECTURE MODELS =============
+
+class Worker(Base):
+    """Workers/Manpower for resource allocation"""
+    __tablename__ = "workers"
+    
+    worker_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    department = Column(String(50), nullable=False, index=True)
+    worker_name = Column(String(255), nullable=False)
+    role = Column(String(100))
+    skills = Column(JSONB)
+    certifications = Column(JSONB)
+    status = Column(String(20), CheckConstraint("status IN ('active', 'on_leave', 'sick', 'inactive')"))
+    phone = Column(String(20))
+    email = Column(String(255))
+    hire_date = Column(Date)
+    created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+
+
+class Pipeline(Base):
+    """Pipeline infrastructure for water department"""
+    __tablename__ = "pipelines"
+    
+    pipeline_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    location = Column(Text, nullable=False, index=True)
+    zone = Column(String(50), index=True)
+    pipeline_type = Column(String(20), CheckConstraint("pipeline_type IN ('supply', 'drainage', 'sewage')"))
+    diameter_mm = Column(Integer)
+    material = Column(String(50))
+    length_meters = Column(Numeric(10, 2))
+    pressure_psi = Column(Numeric(6, 2))
+    flow_rate = Column(Numeric(10, 2))
+    condition = Column(String(20), CheckConstraint("condition IN ('excellent', 'good', 'fair', 'poor', 'critical')"))
+    installation_date = Column(Date)
+    last_inspection_date = Column(Date)
+    next_inspection_due = Column(Date)
+    operational_status = Column(String(20), CheckConstraint("operational_status IN ('active', 'inactive', 'under_repair', 'retired')"))
+    created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    notes = Column(Text)
+
+
+class Reservoir(Base):
+    """Water reservoirs for emergency backup calculations"""
+    __tablename__ = "reservoirs"
+    
+    reservoir_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    location = Column(Text, nullable=False, index=True)
+    capacity_liters = Column(Integer, nullable=False)
+    current_level_liters = Column(Integer)
+    operational_status = Column(String(20), CheckConstraint("operational_status IN ('active', 'maintenance', 'emergency', 'inactive')"))
+    last_reading_time = Column(DateTime)
+    created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+
+
+class Incident(Base):
+    """Incidents for safety risk tracking"""
+    __tablename__ = "incidents"
+    
+    incident_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    department = Column(String(50), nullable=False, index=True)
+    incident_type = Column(String(100), nullable=False)
+    location = Column(Text, nullable=False, index=True)
+    severity = Column(String(20), CheckConstraint("severity IN ('low', 'medium', 'high', 'critical')"))
+    reported_date = Column(DateTime, nullable=False, default=func.current_timestamp(), index=True)
+    reported_by = Column(String(255))
+    description = Column(Text)
+    status = Column(String(20), CheckConstraint("status IN ('reported', 'investigating', 'resolved', 'closed')"))
+    resolution_date = Column(DateTime)
+    created_at = Column(DateTime, default=func.current_timestamp())
+    notes = Column(Text)
+
+
+class WorkSchedule(Base):
+    """Work schedules for conflict detection"""
+    __tablename__ = "work_schedules"
+    
+    schedule_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    department = Column(String(50), nullable=False, index=True)
+    activity_type = Column(String(100), nullable=False)
+    location = Column(Text, nullable=False, index=True)
+    scheduled_date = Column(Date, nullable=False, index=True)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    priority = Column(String(20), CheckConstraint("priority IN ('low', 'medium', 'high', 'critical')"))
+    workers_assigned = Column(Integer)
+    equipment_assigned = Column(JSONB)
+    status = Column(String(20), CheckConstraint("status IN ('scheduled', 'in_progress', 'completed', 'cancelled')"))
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.project_id", ondelete="SET NULL"))
+    created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    notes = Column(Text)
+
+
+class DepartmentBudget(Base):
+    """Department budgets for financial tracking"""
+    __tablename__ = "department_budgets"
+    
+    budget_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    department = Column(String(50), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    total_budget = Column(Numeric(15, 2), nullable=False)
+    allocated = Column(Numeric(15, 2), default=0)
+    spent = Column(Numeric(15, 2), default=0)
+    status = Column(String(20))
+    created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    
+    __table_args__ = (
+        CheckConstraint("month BETWEEN 1 AND 12", name='month_range_check'),
+        CheckConstraint("status IN ('active', 'depleted', 'frozen', 'closed')", name='status_check'),
+        Index('idx_budget_department', 'department'),
+        Index('idx_budget_period', 'year', 'month'),
+        {},
+    )
+
