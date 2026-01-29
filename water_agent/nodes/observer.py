@@ -1,31 +1,45 @@
 """
-PHASE 8: Observe Node
+PHASE 8: Observer Node (LLM-Enhanced)
 
-Normalize tool outputs. No decision here, just organization.
+Analyze tool outputs using LLM to extract insights.
 """
 
 import logging
+import json
 
 from ..state import DepartmentState
+from ..config import settings
+from .llm_helper import get_llm_client
 
 logger = logging.getLogger(__name__)
 
 
 def observer_node(state: DepartmentState) -> DepartmentState:
     """
-    PHASE 8: Observe Node
+    PHASE 8: Observer Node (LLM-Enhanced)
     
-    Purpose: Normalize tool outputs.
-    
-    This step simply organizes results into a standard format
-    for the feasibility evaluator.
-    
-    No reasoning or decision made here.
+    Uses LLM to analyze tool results and extract insights.
     """
     
     logger.info("👁️  [NODE: Observer]")
     
     try:
+        tool_results = state.get("tool_results", {})
+        plan = state.get("plan", {})
+        
+        # Try LLM first
+        llm_client = get_llm_client()
+        if llm_client:
+            logger.info("🤖 Using LLM for observation analysis...")
+            llm_observations = _analyze_with_llm(llm_client, tool_results, plan)
+            
+            if llm_observations:
+                logger.info(f"✓ LLM extracted {len(llm_observations.get('key_observations', []))} observations")
+                state["observations"] = llm_observations
+                return state
+        
+        # Fallback to deterministic
+        logger.info("Using deterministic fallback")
         tool_results = state.get("tool_results", {})
         
         # Normalize observations into a consistent structure
@@ -61,23 +75,63 @@ def observer_node(state: DepartmentState) -> DepartmentState:
             observations["extracted_facts"]["zone_risk_level"] = risk.get("risk_level", "unknown")
             observations["extracted_facts"]["zone_risk_factors"] = risk.get("contributing_factors", [])
         
-        if "budget" in tool_results:
-            budget = tool_results["budget"]
-            observations["extracted_facts"]["budget_available"] = budget.get("can_afford", False)
-            observations["extracted_facts"]["remaining_budget"] = budget.get("remaining", 0)
-        
-        if "active_projects" in tool_results:
-            projects = tool_results["active_projects"]
-            observations["extracted_facts"]["active_projects_count"] = projects.get("active_count", 0)
-        
         state["observations"] = observations
-        logger.info(f"✓ Observations normalized: {len(observations['extracted_facts'])} facts")
+        logger.info(f"✓ Observations normalized: {len(observations.get('extracted_facts', {}))} facts")
         
     except Exception as e:
         logger.error(f"✗ Observer error: {e}")
-        state["observations"] = {
-            "raw_results": state.get("tool_results", {}),
-            "error": str(e)
-        }
+        state["observations"] = {"error": str(e)}
     
     return state
+
+
+def _analyze_with_llm(client, tool_results: dict, plan: dict) -> dict:
+    """Use LLM to analyze tool results"""
+    try:
+        prompt = f"""Analyze these tool execution results and extract key insights.
+
+TOOL RESULTS:
+{json.dumps(tool_results, indent=2)}
+
+ORIGINAL PLAN:
+{json.dumps(plan, indent=2)}
+
+Return ONLY valid JSON:
+{{
+  "key_observations": ["observation 1", "observation 2", ...],
+  "discrepancies": ["any issues or unexpected results"],
+  "resource_status": {{"workers": "sufficient/insufficient", "budget": "within/over"}},
+  "recommendations": ["action 1", "action 2"]
+}}
+
+Focus on:
+1. Resource availability vs requirements
+2. Any conflicts or issues detected  
+3. Comparison with planned actions
+4. Risk factors identified"""
+
+        response = client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a Water Department observation AI. Analyze tool results and extract actionable insights. Always return valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=600
+        )
+        
+        llm_output = response.choices[0].message.content.strip()
+        
+        # Clean markdown
+        if llm_output.startswith("```json"):
+            llm_output = llm_output[7:]
+        elif llm_output.startswith("```"):
+            llm_output = llm_output[3:]
+        if llm_output.endswith("```"):
+            llm_output = llm_output[:-3]
+        
+        return json.loads(llm_output.strip())
+        
+    except Exception as e:
+        logger.warning(f"LLM observation failed: {e}")
+        return None

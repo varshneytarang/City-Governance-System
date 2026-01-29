@@ -1,19 +1,38 @@
 """
 PHASE 4: Intent + Risk Analyzer Node
 
-Classify the request and assess immediate risk.
+Classify the request and assess immediate risk using LLM.
 
 Rule: If risk == high → escalate immediately.
 """
 
 from typing import Dict, List
 import logging
+import json
 
 from ..state import DepartmentState
 from ..database import WaterDepartmentQueries
 from ..tools import WaterDepartmentTools
+from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+# Initialize LLM client if available
+def _get_llm_client():
+    """Get LLM client for intent analysis"""
+    try:
+        if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
+            import openai
+            return openai.OpenAI(
+                api_key=settings.GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1"
+            )
+        elif settings.LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY:
+            import openai
+            return openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+    except:
+        return None
+    return None
 
 
 # Intent classification mapping
@@ -30,21 +49,9 @@ INTENT_MAPPING = {
 def intent_analyzer_node(state: DepartmentState, 
                         tools: WaterDepartmentTools) -> DepartmentState:
     """
-    PHASE 4: Intent + Risk Analysis Node
+    PHASE 4: Intent + Risk Analysis Node (LLM-Enhanced)
     
-    Purpose: Decide if this can be handled autonomously.
-    
-    Logic:
-    - Classify request type
-    - Assess safety implications
-    - Check for legal/policy exposure
-    
-    Output:
-    - intent: what is the request trying to accomplish?
-    - risk_level: low, medium, high, critical
-    - safety_concerns: list of issues
-    
-    Rule: If risk == critical → escalate immediately.
+    Uses LLM to classify intent and assess risk, with deterministic fallback.
     """
     
     logger.info("🔍 [NODE: Intent + Risk Analysis]")
@@ -55,7 +62,27 @@ def intent_analyzer_node(state: DepartmentState,
         location = input_event.get("location")
         context = state.get("context", {})
         
-        # ========== INTENT CLASSIFICATION ==========
+        # Try LLM first
+        llm_client = _get_llm_client()
+        if llm_client:
+            logger.info("🤖 Using LLM for intent analysis...")
+            llm_result = _analyze_with_llm(llm_client, input_event, context)
+            
+            if llm_result:
+                intent = llm_result.get("intent", "unknown_request")
+                risk_level = llm_result.get("risk_level", "low")
+                safety_concerns = llm_result.get("safety_concerns", [])
+                logger.info(f"  → LLM: {request_type} → Intent: {intent}, Risk: {risk_level}")
+                
+                return {
+                    **state,
+                    "intent": intent,
+                    "risk_level": risk_level,
+                    "safety_concerns": safety_concerns
+                }
+        
+        # Fallback to deterministic
+        logger.info("Using deterministic fallback")
         intent = INTENT_MAPPING.get(request_type, "unknown_request")
         logger.info(f"  → Request: {request_type} → Intent: {intent}")
         
@@ -149,3 +176,78 @@ def intent_analyzer_node(state: DepartmentState,
         state["safety_concerns"] = [f"Analysis error: {str(e)}"]
     
     return state
+
+
+def _analyze_with_llm(client, input_event: Dict, context: Dict) -> Dict:
+    """Use LLM to analyze intent and assess risk"""
+    try:
+        prompt = f"""Analyze this Water Department request and classify its intent and risk level.
+
+REQUEST:
+{json.dumps(input_event, indent=2)}
+
+CONTEXT:
+- Active Projects: {len(context.get('active_projects', []))}
+- Available Workers: {context.get('worker_info', {}).get('available_count', 'unknown')}
+- High Risk Zone: {context.get('is_high_risk_zone', False)}
+- Recent Incidents: {len(context.get('incidents', []))}
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "intent": "negotiate_schedule | emergency_response | coordinate_maintenance | assess_capacity | respond_to_incident | plan_project",
+  "risk_level": "low | medium | high | critical",
+  "safety_concerns": ["specific concern 1", "specific concern 2"],
+  "reasoning": "brief explanation of the classification"
+}}
+
+Consider:
+1. Emergency indicators (severity, incident type)
+2. Location risk factors
+3. Time constraints and urgency
+4. Resource availability
+5. Potential safety issues
+
+Choose risk level:
+- low: routine operation, no safety concerns
+- medium: some complexity, manageable risks
+- high: significant risks, careful planning needed
+- critical: immediate safety threat, escalation required"""
+
+        response = client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a Water Department risk analysis AI. Analyze requests and classify intent and risk levels accurately. Always return valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.1,
+            max_tokens=500
+        )
+        
+        llm_output = response.choices[0].message.content
+        logger.info(f"LLM output: {llm_output[:150]}...")
+        
+        # Clean JSON (handle markdown wrapping)
+        llm_output_clean = llm_output.strip()
+        if llm_output_clean.startswith("```json"):
+            llm_output_clean = llm_output_clean[7:]
+        elif llm_output_clean.startswith("```"):
+            llm_output_clean = llm_output_clean[3:]
+        if llm_output_clean.endswith("```"):
+            llm_output_clean = llm_output_clean[:-3]
+        
+        # Parse JSON
+        result = json.loads(llm_output_clean.strip())
+        return result
+        
+    except json.JSONDecodeError as e:
+        logger.warning(f"LLM returned invalid JSON: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"LLM analysis failed: {e}")
+        return None

@@ -17,8 +17,9 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "password"
     
     # LLM
-    LLM_PROVIDER: str = "openai"  # openai or local
+    LLM_PROVIDER: str = "openai"  # openai, groq, or local
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     LLM_MODEL: str = "gpt-4"
     LLM_TEMPERATURE: float = 0.3
     
