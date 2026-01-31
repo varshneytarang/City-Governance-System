@@ -4,6 +4,7 @@ connection management and provides health-specific query methods.
 """
 
 import logging
+import os
 from typing import List, Dict, Optional, Tuple
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -22,16 +23,25 @@ class HealthDatabaseConnection:
 
     def connect(self):
         try:
-            self.conn = psycopg2.connect(
-                host=settings.DB_HOST,
-                port=settings.DB_PORT,
-                database=settings.DB_NAME,
-                user=settings.DB_USER,
-                password=settings.DB_PASSWORD
-            )
+            # Prefer DSN if provided (HEALTH_DATABASE_URL or DATABASE_URL)
+            dsn = os.getenv("HEALTH_DATABASE_URL") or os.getenv("DATABASE_URL")
+            if dsn:
+                self.conn = psycopg2.connect(dsn)
+            else:
+                self.conn = psycopg2.connect(
+                    host=settings.DB_HOST,
+                    port=settings.DB_PORT,
+                    database=settings.DB_NAME,
+                    user=settings.DB_USER,
+                    password=settings.DB_PASSWORD
+                )
             logger.info("✓ Connected to health database")
         except Exception as e:
-            logger.error(f"Health DB connection failed: {e}")
+            # Helpful context without leaking credentials
+            logger.error(
+                "Health DB connection failed: %s | host=%s port=%s db=%s user=%s",
+                str(e), settings.DB_HOST, settings.DB_PORT, settings.DB_NAME, settings.DB_USER
+            )
             raise
 
     def close(self):

@@ -136,3 +136,7 @@ def health_planner_llm_node(state: Dict) -> Dict:
     state["alternative_plans"] = result.get("alternative_plans", [])
     state["llm_used"] = result.get("llm_used", False)
     return state
+
+
+# Export a common name expected by other modules
+health_planner_node = health_planner_llm_node

@@ -19,10 +19,10 @@ from water_agent.config import settings as global_settings
 from .nodes import (
     health_context_loader,
     health_risk_estimator,
-    health_planner,
+    health_planner_node,
     health_policy_node,
     health_confidence_node,
-    output_generator
+    output_generator_node
 )
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,12 @@ class HealthDepartmentAgent:
     def _build_graph(self):
         builder = StateGraph(DepartmentState)
 
-        builder.add_node("health_context_loader", health_context_loader.health_context_loader)
-        builder.add_node("health_risk_estimator", health_risk_estimator.health_risk_estimator)
-        builder.add_node("health_planner", health_planner.health_planner_node)
-        builder.add_node("health_policy", health_policy_node.health_policy_node)
-        builder.add_node("health_confidence", health_confidence_node.health_confidence_node)
-        builder.add_node("output_generator", output_generator.output_generator_node)
+        builder.add_node("health_context_loader", health_context_loader)
+        builder.add_node("health_risk_estimator", health_risk_estimator)
+        builder.add_node("health_planner", health_planner_node)
+        builder.add_node("health_policy", health_policy_node)
+        builder.add_node("health_confidence", health_confidence_node)
+        builder.add_node("output_generator", output_generator_node)
 
         # Wiring
         builder.add_edge(START, "health_context_loader")

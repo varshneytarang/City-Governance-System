@@ -33,14 +33,18 @@ def output_generator_node(state: Dict) -> Dict:
     client = get_llm_client()
     if client:
         try:
+            # build the input state JSON separately to avoid f-string parsing issues
+            input_state = {
+                'decision': response['decision'],
+                'cost_summary': response['cost_summary'],
+                'fiscal_impact': response['fiscal_impact'],
+                'recommendations': response['recommendations']
+            }
+            json_state = json.dumps(input_state)
             prompt = (
                 "Produce a concise JSON summary for this finance decision with keys: summary (string), confidence (number), recommended_actions (list).\n\n"
-                f"INPUT_STATE: {json.dumps({
-                    'decision': response['decision'],
-                    'cost_summary': response['cost_summary'],
-                    'fiscal_impact': response['fiscal_impact'],
-                    'recommendations': response['recommendations']
-                })}"
+                + "INPUT_STATE: "
+                + json_state
             )
 
             resp = client.chat.completions.create(

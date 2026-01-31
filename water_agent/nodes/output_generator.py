@@ -40,7 +40,11 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
                     "policy_compliant": policy_ok,
                     "confidence": confidence,
                     "risk_level": state.get("risk_level", "unknown"),
-                    "plan": state.get("plan", {})
+                    "plan": state.get("plan", {}),
+                    "tool_results": state.get("tool_results", {}),
+                    "observations": state.get("observations", {}),
+                    "feasibility_reason": state.get("feasibility_reason", ""),
+                    "policy_violations": state.get("policy_violations", [])
                 }
             }
             logger.info("  → Escalation response generated")
@@ -62,7 +66,9 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
                     "policy_compliant": policy_ok,
                     "risk_level": state.get("risk_level", "unknown"),
                     "feasibility_reason": state.get("feasibility_reason", ""),
-                    "safety_concerns": state.get("safety_concerns", [])
+                    "safety_concerns": state.get("safety_concerns", []),
+                    "tool_results": state.get("tool_results", {}),
+                    "observations": state.get("observations", {})
                 }
             }
             logger.info("  → Recommendation response generated")
