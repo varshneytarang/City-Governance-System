@@ -1,5 +1,5 @@
 """
-Configuration for Water Department Agent
+Configuration for Sanitation Department Agent
 """
 
 from pydantic_settings import BaseSettings
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     USE_LLM_FOR_CONFIDENCE: bool = True
     
     # Agent
-    DEPARTMENT: str = "water"
+    DEPARTMENT: str = "sanitation"
     MAX_PLANNING_ATTEMPTS: int = 3
     CONFIDENCE_THRESHOLD: float = 0.7
     
