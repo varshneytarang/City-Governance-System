@@ -14,6 +14,9 @@ from .llm_helper import get_llm_client
 
 logger = logging.getLogger(__name__)
 
+# Compatibility alias for tests
+_get_llm_client = get_llm_client
+
 
 def confidence_estimator_node(state: DepartmentState) -> DepartmentState:
     """

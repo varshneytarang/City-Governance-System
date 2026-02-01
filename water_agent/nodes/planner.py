@@ -189,12 +189,25 @@ CURRENT CONTEXT:
 - Available Workers: {context.get('worker_info', {}).get('available_count', 'unknown')}
 - Budget Status: ${context.get('budget_status', {}).get('available', 0):,}
 
-Return ONLY valid JSON:
+AVAILABLE TOOLS (use these exact names in steps):
+- check_manpower_availability: Check worker availability for a location
+- check_schedule_conflicts: Check for scheduling conflicts
+- check_pipeline_health: Assess pipeline conditions
+- check_reservoir_levels: Check water reservoir levels
+- assess_zone_risk: Assess risk level for a location
+- check_budget_availability: Verify budget for estimated cost
+- get_active_projects: Get ongoing projects in location
+- alert_all_workers: Send emergency alert to all workers
+- activate_emergency_protocol: Activate emergency response
+- document_request: Document the request
+- log_decision: Log the decision
+
+Return ONLY valid JSON using EXACT tool names from above:
 {{
   "plans": [
     {{
       "name": "Plan A",
-      "steps": ["Step 1", "Step 2", ...],
+      "steps": ["check_manpower_availability", "check_pipeline_health", ...],
       "estimated_duration": "2 days",
       "estimated_cost": 50000,
       "resources_needed": ["5 workers", "equipment"],
@@ -284,7 +297,9 @@ Return ONLY valid JSON:
                     "check_pipeline_health",
                     "calculate_service_impact"
                 ],
-                "expected_outcome": "Maintenance scheduled safely"
+                "expected_outcome": "Maintenance scheduled safely",
+                "estimated_cost": 2500,
+                "resources_needed": ["5 field technicians", "standard maintenance kit", "safety gear"]
             })
         
         elif intent == "assess_capacity":
@@ -326,3 +341,17 @@ def planner_node(state: DepartmentState) -> DepartmentState:
     state["alternative_plans"] = plan_result.get("alternative_plans", [])
     
     return state
+
+
+# Compatibility shim for tests that patch module-level _get_llm_client
+def _get_llm_client():
+    try:
+        if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
+            import openai
+            return openai.OpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+        elif settings.LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY:
+            import openai
+            return openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+    except Exception:
+        return None
+    return None

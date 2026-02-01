@@ -5,38 +5,39 @@ Configuration for Water Department Agent
 from pydantic_settings import BaseSettings
 from typing import Optional
 
+# Import shared global settings and LLM defaults
+import global_config
+
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables"""
-    
-    # Database
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 5432
-    DB_NAME: str = "departments"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
-    
-    # LLM
-    LLM_PROVIDER: str = "openai"  # openai, groq, or local
-    OPENAI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
-    LLM_MODEL: str = "gpt-4"
-    LLM_TEMPERATURE: float = 0.3
-    
-    # LLM Usage Control (to reduce API calls)
-    USE_LLM_FOR_PLANNER: bool = True
-    USE_LLM_FOR_OBSERVER: bool = False
-    USE_LLM_FOR_POLICY: bool = False
-    USE_LLM_FOR_CONFIDENCE: bool = True
-    
-    # Agent
+    """Application settings loaded from environment variables
+
+    Defaults are read from `global_config.global_settings` so a single
+    `.env` file can configure DB and agent-wide defaults for all agents.
+    """
+
+    # Database (default to global settings)
+    DB_HOST: str = global_config.global_settings.DB_HOST
+    DB_PORT: int = global_config.global_settings.DB_PORT
+    DB_NAME: str = global_config.global_settings.DB_NAME
+    DB_USER: str = global_config.global_settings.DB_USER
+    DB_PASSWORD: str = global_config.global_settings.DB_PASSWORD
+
+    # LLM (defaults come from global shared LLM settings)
+    LLM_PROVIDER: str = global_config.global_llm_settings.LLM_PROVIDER
+    OPENAI_API_KEY: Optional[str] = global_config.global_llm_settings.OPENAI_API_KEY
+    GROQ_API_KEY: Optional[str] = global_config.global_llm_settings.GROQ_API_KEY
+    LLM_MODEL: str = global_config.global_llm_settings.LLM_MODEL
+    LLM_TEMPERATURE: float = global_config.global_llm_settings.LLM_TEMPERATURE
+
+    # Agent (defaults come from global settings)
     DEPARTMENT: str = "water"
-    MAX_PLANNING_ATTEMPTS: int = 3
-    CONFIDENCE_THRESHOLD: float = 0.7
-    
+    MAX_PLANNING_ATTEMPTS: int = global_config.global_settings.MAX_PLANNING_ATTEMPTS
+    CONFIDENCE_THRESHOLD: float = global_config.global_settings.CONFIDENCE_THRESHOLD
+
     # Logging
     LOG_LEVEL: str = "INFO"
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = True

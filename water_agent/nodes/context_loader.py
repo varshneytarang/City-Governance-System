@@ -14,8 +14,8 @@ from ..database import WaterDepartmentQueries
 logger = logging.getLogger(__name__)
 
 
-def context_loader_node(state: DepartmentState, 
-                       queries: WaterDepartmentQueries) -> DepartmentState:
+def context_loader_node(state: DepartmentState,
+                       queries: WaterDepartmentQueries = None) -> DepartmentState:
     """
     Load context from database.
     
@@ -36,6 +36,10 @@ def context_loader_node(state: DepartmentState,
     logger.info("📊 [NODE: Context Loader] Loading reality...")
     
     try:
+        # Ensure a queries object exists for backwards compatibility when tests call
+        # this node without providing `queries`.
+        if queries is None:
+            queries = WaterDepartmentQueries()
         input_event = state.get("input_event", {})
         location = input_event.get("location")
         
