@@ -8,8 +8,8 @@ Each tool returns structured data.
 import logging
 from typing import Dict, List
 
-from ..state import DepartmentState
-from ..tools import WaterDepartmentTools
+from ..state import EngineeringState
+from ..tools import EngineeringDepartmentTools
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ def _parse_tool_name(step: str) -> str:
     return None
 
 
-def tool_executor_node(state: DepartmentState, tools: WaterDepartmentTools = None) -> DepartmentState:
+def tool_executor_node(state: EngineeringState, tools: EngineeringDepartmentTools) -> EngineeringState:
     """
     PHASE 7: Tool Execution Node
     
@@ -80,9 +80,6 @@ def tool_executor_node(state: DepartmentState, tools: WaterDepartmentTools = Non
     logger.info("🔧 [NODE: Tool Executor]")
     
     try:
-        # Backwards compatibility: instantiate tools if not provided by caller/tests
-        if tools is None:
-            tools = WaterDepartmentTools()
         plan = state.get("plan", {})
         steps = plan.get("steps", [])
         input_event = state.get("input_event", {})

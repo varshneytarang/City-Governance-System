@@ -7,18 +7,15 @@ Uses LLM to assess confidence with nuanced understanding of risk factors.
 import logging
 import json
 
-from ..state import DepartmentState
+from ..state import EngineeringState
 from ..rules.confidence_calculator import ConfidenceCalculator
 from ..config import settings
 from .llm_helper import get_llm_client
 
 logger = logging.getLogger(__name__)
 
-# Compatibility alias for tests
-_get_llm_client = get_llm_client
 
-
-def confidence_estimator_node(state: DepartmentState) -> DepartmentState:
+def confidence_estimator_node(state: EngineeringState) -> EngineeringState:
     """
     PHASE 12: Confidence Estimator (LLM-Enhanced)
     

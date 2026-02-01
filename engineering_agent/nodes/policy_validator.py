@@ -7,18 +7,15 @@ Uses LLM to check policy compliance with nuanced understanding.
 import logging
 import json
 
-from ..state import DepartmentState
+from ..state import EngineeringState
 from ..rules.policy_rules import PolicyValidator
 from ..config import settings
 from .llm_helper import get_llm_client
 
 logger = logging.getLogger(__name__)
 
-# Compatibility alias for tests
-_get_llm_client = get_llm_client
 
-
-def policy_validator_node(state: DepartmentState) -> DepartmentState:
+def policy_validator_node(state: EngineeringState) -> EngineeringState:
     """
     PHASE 10: Policy Validator (LLM-Enhanced)
     

@@ -23,8 +23,8 @@ class HealthPlannerLLM:
             self._init_llm_client()
 
     def _check_llm_available(self) -> bool:
-        openai_key = os.getenv("HEALTH_OPENAI_API_KEY") or settings.OPENAI_API_KEY
-        groq_key = os.getenv("HEALTH_GROQ_API_KEY") or settings.GROQ_API_KEY
+        openai_key = settings.OPENAI_API_KEY
+        groq_key = settings.GROQ_API_KEY
 
         if self.llm_provider == "groq" and groq_key:
             logger.info("✓ HealthPlanner: Groq LLM configured")
@@ -39,11 +39,11 @@ class HealthPlannerLLM:
         try:
             import openai
             if self.llm_provider == "groq":
-                self.client = openai.OpenAI(api_key=os.getenv("HEALTH_GROQ_API_KEY") or settings.GROQ_API_KEY,
+                self.client = openai.OpenAI(api_key=settings.GROQ_API_KEY,
                                             base_url="https://api.groq.com/openai/v1")
                 logger.info("✓ HealthPlanner: Groq client initialized")
             else:
-                self.client = openai.OpenAI(api_key=os.getenv("HEALTH_OPENAI_API_KEY") or settings.OPENAI_API_KEY)
+                self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
                 logger.info("✓ HealthPlanner: OpenAI client initialized")
         except Exception as e:
             logger.error(f"✗ HealthPlanner: Failed to initialize LLM client: {e}")
@@ -90,7 +90,7 @@ Produce 1-2 alternative plans as JSON with this structure:
         prompt = self._build_prompt(intent, goal, context, input_event)
         try:
             response = self.client.chat.completions.create(
-                model=os.getenv("HEALTH_LLM_MODEL") or settings.LLM_MODEL,
+                model=settings.LLM_MODEL,
                 messages=[
                     {"role": "system", "content": "You are a municipal public health planner. Return only JSON."},
                     {"role": "user", "content": prompt},
@@ -98,12 +98,16 @@ Produce 1-2 alternative plans as JSON with this structure:
                 temperature=settings.LLM_TEMPERATURE,
                 max_tokens=800,
             )
-
             llm_output = response.choices[0].message.content
-            if llm_output.startswith("```"):
-                # strip code fences
-                llm_output = llm_output.strip().strip("`\n")
-            parsed = json.loads(llm_output)
+            # Clean markdown code fences like water planner
+            llm_output_clean = llm_output.strip()
+            if llm_output_clean.startswith("```json"):
+                llm_output_clean = llm_output_clean[7:]
+            elif llm_output_clean.startswith("```"):
+                llm_output_clean = llm_output_clean[3:]
+            if llm_output_clean.endswith("```"):
+                llm_output_clean = llm_output_clean[:-3]
+            parsed = json.loads(llm_output_clean.strip())
             return parsed.get("plans", [])
         except Exception as e:
             logger.error(f"✗ HealthPlanner LLM call failed: {e}")

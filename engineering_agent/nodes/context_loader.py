@@ -8,14 +8,14 @@ from typing import List, Dict, Any
 import logging
 from datetime import datetime
 
-from ..state import DepartmentState
-from ..database import WaterDepartmentQueries
+from ..state import EngineeringState
+from ..database import EngineeringDepartmentQueries
 
 logger = logging.getLogger(__name__)
 
 
-def context_loader_node(state: DepartmentState,
-                       queries: WaterDepartmentQueries = None) -> DepartmentState:
+def context_loader_node(state: EngineeringState, 
+                       queries: EngineeringDepartmentQueries) -> EngineeringState:
     """
     Load context from database.
     
@@ -36,10 +36,6 @@ def context_loader_node(state: DepartmentState,
     logger.info("📊 [NODE: Context Loader] Loading reality...")
     
     try:
-        # Ensure a queries object exists for backwards compatibility when tests call
-        # this node without providing `queries`.
-        if queries is None:
-            queries = WaterDepartmentQueries()
         input_event = state.get("input_event", {})
         location = input_event.get("location")
         

@@ -6,6 +6,7 @@ from typing import Dict
 
 from finance_agent.config import settings
 from finance_agent.tools import create_tools
+from finance_agent.database import get_finance_queries
 from finance_agent.nodes.finance_context_loader import finance_context_loader
 from finance_agent.nodes.revenue_forecaster import revenue_forecaster_node
 from finance_agent.nodes.cost_estimator import cost_estimator_node
@@ -17,12 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 class FinanceDepartmentAgent:
-    """Scaffold Finance Agent following water_agent pattern (simplified)."""
+    """Finance Agent with DB/LLM integration (mirrors water_agent pattern)."""
 
     def __init__(self):
         self.settings = settings
         self.tools = create_tools(settings)
-        self.agent_version = "0.1-finance"
+        self.queries = get_finance_queries()
+        self.agent_version = "0.2-finance"
         logger.info("✓ FinanceDepartmentAgent initialized")
 
     def decide(self, request: Dict) -> Dict:
@@ -42,6 +44,7 @@ class FinanceDepartmentAgent:
             "completed_at": None,
             "agent_version": self.agent_version,
             "execution_time_ms": 0,
+            "queries": self.queries,  # Pass DB queries to nodes if needed
         }
 
         # Sequential pipeline (context -> forecast -> cost -> feasibility -> policy -> output)
@@ -67,4 +70,5 @@ class FinanceDepartmentAgent:
             }
 
     def close(self):
+        self.queries.close()
         logger.info("✓ FinanceDepartmentAgent closed")

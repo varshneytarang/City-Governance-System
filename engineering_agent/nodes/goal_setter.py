@@ -9,14 +9,11 @@ LLM formulates clear, actionable goals based on intent and context.
 import logging
 import json
 
-from ..state import DepartmentState
+from ..state import EngineeringState
 from ..config import settings
 from .llm_helper import get_llm_client
 
 logger = logging.getLogger(__name__)
-
-# Compatibility alias for tests that patch module-level name
-_get_llm_client = get_llm_client
 
 
 # Goal mapping from intent
@@ -31,7 +28,7 @@ GOAL_MAPPING = {
 }
 
 
-def goal_setter_node(state: DepartmentState) -> DepartmentState:
+def goal_setter_node(state: EngineeringState) -> EngineeringState:
     """
     PHASE 5: Goal Setter Node (LLM-Enhanced)
     

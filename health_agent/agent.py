@@ -14,7 +14,7 @@ from langgraph.graph import StateGraph, START, END
 
 # Reuse DepartmentState type from water_agent for compatibility
 from water_agent.state import DepartmentState
-from water_agent.config import settings as global_settings
+from .config import settings
 
 from .nodes import (
     health_context_loader,
@@ -32,7 +32,7 @@ class HealthDepartmentAgent:
     """Health Department Agent - scaffolding for the real implementation."""
 
     def __init__(self):
-        self.settings = global_settings
+        self.settings = settings
         self.agent_version = "0.1-health"
         self.graph = self._build_graph()
         logger.info("✓ HealthDepartmentAgent initialized")

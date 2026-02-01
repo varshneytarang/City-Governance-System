@@ -11,7 +11,7 @@ import json
 import os
 from typing import Dict, List, Any
 
-from ..state import DepartmentState
+from ..state import EngineeringState
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class WaterPlanner:
             logger.error(f"✗ Failed to initialize LLM: {e}")
             self.use_llm = False
     
-    def generate_plan(self, state: DepartmentState) -> Dict:
+    def generate_plan(self, state: EngineeringState) -> Dict:
         """
         PHASE 6: Planner Node (LLM)
         
@@ -297,9 +297,7 @@ Return ONLY valid JSON using EXACT tool names from above:
                     "check_pipeline_health",
                     "calculate_service_impact"
                 ],
-                "expected_outcome": "Maintenance scheduled safely",
-                "estimated_cost": 2500,
-                "resources_needed": ["5 field technicians", "standard maintenance kit", "safety gear"]
+                "expected_outcome": "Maintenance scheduled safely"
             })
         
         elif intent == "assess_capacity":
@@ -331,7 +329,7 @@ Return ONLY valid JSON using EXACT tool names from above:
         return plans
 
 
-def planner_node(state: DepartmentState) -> DepartmentState:
+def planner_node(state: EngineeringState) -> EngineeringState:
     """Planner node that generates plans"""
     
     planner = WaterPlanner()
@@ -341,17 +339,3 @@ def planner_node(state: DepartmentState) -> DepartmentState:
     state["alternative_plans"] = plan_result.get("alternative_plans", [])
     
     return state
-
-
-# Compatibility shim for tests that patch module-level _get_llm_client
-def _get_llm_client():
-    try:
-        if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
-            import openai
-            return openai.OpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
-        elif settings.LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY:
-            import openai
-            return openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-    except Exception:
-        return None
-    return None
