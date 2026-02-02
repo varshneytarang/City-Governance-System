@@ -9,3 +9,8 @@ pydantic-settings==2.1.0
 # Transparency Logging with RAG Vector Database
 chromadb>=0.4.22
 sentence-transformers>=2.2.2
+
+# Backend API
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
