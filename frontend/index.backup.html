@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="City Governance AI Command Center - Multi-Agent Autonomous Decision Support for Municipal Governance">
+    <title>City Governance AI | Autonomous Decision Intelligence</title>
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+    <!-- Accessibility Controls -->
+    <div class="accessibility-controls" role="region" aria-label="Accessibility Controls">
+        <button id="reduce-motion" class="a11y-btn" aria-label="Toggle animations">
+            <span class="icon">⚡</span>
+        </button>
+        <button id="high-contrast" class="a11y-btn" aria-label="Toggle high contrast">
+            <span class="icon">◐</span>
+        </button>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="custom-cursor" aria-hidden="true"></div>
+    <div class="cursor-trail" aria-hidden="true"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav" role="navigation">
+        <div class="nav-container">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <div class="hexagon-badge">
+                        <span class="ai-symbol">AI</span>
+                    </div>
+                </div>
+                <span class="logo-text">City Governance AI</span>
+            </div>
+            <div class="nav-links">
+                <a href="#agents" class="nav-link">Agents</a>
+                <a href="#coordination" class="nav-link">Coordination</a>
+                <a href="#transparency" class="nav-link">Transparency</a>
+                <a href="#workflow" class="nav-link">Workflow</a>
+                <a href="#stats" class="nav-link">Statistics</a>
+            </div>
+            <button class="cta-nav">Access Portal</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section" id="hero">
+        <canvas id="neural-bg" class="neural-background" aria-hidden="true"></canvas>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-text">Production Ready v2.0</span>
+            </div>
+            
+            <h1 class="hero-title">
+                <span class="title-line" data-text="Autonomous Intelligence">Autonomous Intelligence</span>
+                <span class="title-line accent" data-text="for Urban Evolution">for Urban Evolution</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                Multi-Agent Decision Support System for Municipal Governance
+            </p>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number" data-count="6">0</span>
+                    <span class="stat-label">AI Agents</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number" data-count="15000">0</span>
+                    <span class="stat-label">Lines of Code</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number" data-count="90">0</span>
+                    <span class="stat-suffix">%</span>
+                    <span class="stat-label">Test Coverage</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-badge">Ready</span>
+                    <span class="stat-label">Production</span>
+                </div>
+            </div>
+            
+            <button class="cta-primary" id="enter-portal">
+                <span class="cta-text">Enter Command Center</span>
+                <span class="cta-icon">→</span>
+                <div class="portal-effect"></div>
+            </button>
+            
+            <div class="scroll-indicator">
+                <div class="scroll-icon"></div>
+                <span class="scroll-text">Scroll to explore</span>
+            </div>
+        </div>
+        
+        <!-- Floating particles -->
+        <div class="particle-container" aria-hidden="true"></div>
+    </section>
+
+    <!-- Department Agents Section -->
+    <section class="agents-section" id="agents">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-accent">Department</span> Agents
+            </h2>
+            <p class="section-subtitle">
+                Six autonomous agents working in perfect coordination
+            </p>
+            
+            <div class="agents-constellation">
+                <div class="central-node">
+                    <div class="coordination-core"></div>
+                    <span class="core-label">Coordination</span>
+                </div>
+                
+                <div class="agent-orb" data-agent="water" data-index="0">
+                    <div class="orb-inner">
+                        <div class="orb-icon">💧</div>
+                        <h3 class="orb-title">Water</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Pipeline monitoring</p>
+                        <p class="orb-capability">• Emergency response</p>
+                        <p class="orb-capability">• Schedule coordination</p>
+                        <p class="orb-capability">• 7 operational tools</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+                
+                <div class="agent-orb" data-agent="engineering" data-index="1">
+                    <div class="orb-inner">
+                        <div class="orb-icon">⚙️</div>
+                        <h3 class="orb-title">Engineering</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Project approval</p>
+                        <p class="orb-capability">• Contractor management</p>
+                        <p class="orb-capability">• Safety compliance</p>
+                        <p class="orb-capability">• 13 operational tools</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+                
+                <div class="agent-orb" data-agent="fire" data-index="2">
+                    <div class="orb-inner">
+                        <div class="orb-icon">🔥</div>
+                        <h3 class="orb-title">Fire</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Emergency dispatch</p>
+                        <p class="orb-capability">• Resource allocation</p>
+                        <p class="orb-capability">• Hazmat response</p>
+                        <p class="orb-capability">• 9 operational tools</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+                
+                <div class="agent-orb" data-agent="health" data-index="3">
+                    <div class="orb-inner">
+                        <div class="orb-icon">🏥</div>
+                        <h3 class="orb-title">Health</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Risk assessment</p>
+                        <p class="orb-capability">• Outbreak management</p>
+                        <p class="orb-capability">• Facility coordination</p>
+                        <p class="orb-capability">• Health monitoring</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+                
+                <div class="agent-orb" data-agent="sanitation" data-index="4">
+                    <div class="orb-inner">
+                        <div class="orb-icon">♻️</div>
+                        <h3 class="orb-title">Sanitation</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Route optimization</p>
+                        <p class="orb-capability">• Waste management</p>
+                        <p class="orb-capability">• Complaint response</p>
+                        <p class="orb-capability">• 9 operational tools</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+                
+                <div class="agent-orb" data-agent="finance" data-index="5">
+                    <div class="orb-inner">
+                        <div class="orb-icon">💰</div>
+                        <h3 class="orb-title">Finance</h3>
+                    </div>
+                    <div class="orb-details">
+                        <p class="orb-capability">• Budget allocation</p>
+                        <p class="orb-capability">• Financial oversight</p>
+                        <p class="orb-capability">• Cost analysis</p>
+                        <p class="orb-capability">• Fund tracking</p>
+                    </div>
+                    <div class="connection-line"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Coordination Brain Section -->
+    <section class="coordination-section" id="coordination">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-accent">Coordination</span> Intelligence
+            </h2>
+            <p class="section-subtitle">
+                Hybrid decision system resolving conflicts in real-time
+            </p>
+            
+            <div class="coordination-demo">
+                <div class="brain-container">
+                    <div class="brain-core">
+                        <div class="neural-pulse"></div>
+                        <div class="brain-nodes">
+                            <div class="brain-node" style="--angle: 0deg"></div>
+                            <div class="brain-node" style="--angle: 60deg"></div>
+                            <div class="brain-node" style="--angle: 120deg"></div>
+                            <div class="brain-node" style="--angle: 180deg"></div>
+                            <div class="brain-node" style="--angle: 240deg"></div>
+                            <div class="brain-node" style="--angle: 300deg"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="coordination-flow">
+                        <div class="flow-particle" style="--delay: 0s"></div>
+                        <div class="flow-particle" style="--delay: 0.5s"></div>
+                        <div class="flow-particle" style="--delay: 1s"></div>
+                        <div class="flow-particle" style="--delay: 1.5s"></div>
+                    </div>
+                </div>
+                
+                <div class="coordination-stats">
+                    <div class="coord-stat">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-content">
+                            <h4>5 Conflict Types</h4>
+                            <p>Resource, Location, Timing, Policy, Budget</p>
+                        </div>
+                    </div>
+                    <div class="coord-stat">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-content">
+                            <h4>100% Resolution</h4>
+                            <p>Rule-based + LLM + Human escalation</p>
+                        </div>
+                    </div>
+                    <div class="coord-stat">
+                        <div class="stat-icon">🔒</div>
+                        <div class="stat-content">
+                            <h4>Deadlock-Free</h4>
+                            <p>Circular dependency resolution verified</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Transparency Vault Section -->
+    <section class="transparency-section" id="transparency">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-accent">Transparency</span> Vault
+            </h2>
+            <p class="section-subtitle">
+                Every decision logged, searchable, and publicly accountable
+            </p>
+            
+            <div class="vault-container">
+                <div class="glass-pyramid">
+                    <div class="pyramid-face front"></div>
+                    <div class="pyramid-face right"></div>
+                    <div class="pyramid-face back"></div>
+                    <div class="pyramid-face left"></div>
+                    <div class="pyramid-base"></div>
+                    
+                    <div class="decision-crystals">
+                        <div class="crystal" style="--x: 0; --y: 0; --z: 0" data-type="water"></div>
+                        <div class="crystal" style="--x: 30; --y: -20; --z: 10" data-type="engineering"></div>
+                        <div class="crystal" style="--x: -30; --y: 20; --z: -10" data-type="fire"></div>
+                        <div class="crystal" style="--x: 20; --y: 30; --z: 20" data-type="health"></div>
+                        <div class="crystal" style="--x: -20; --y: -30; --z: -20" data-type="sanitation"></div>
+                    </div>
+                </div>
+                
+                <div class="search-interface">
+                    <div class="search-bar">
+                        <input type="text" 
+                               id="semantic-search" 
+                               placeholder="Search decisions semantically..."
+                               aria-label="Search decisions">
+                        <button class="search-btn">
+                            <span>🔍</span>
+                        </button>
+                    </div>
+                    
+                    <div class="search-features">
+                        <div class="feature-tag">Vector Database</div>
+                        <div class="feature-tag">RAG-Powered</div>
+                        <div class="feature-tag">Real-time Search</div>
+                    </div>
+                    
+                    <div class="transparency-metrics">
+                        <div class="metric">
+                            <span class="metric-value">40+</span>
+                            <span class="metric-label">Database Tables</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-label">Decisions Logged</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">ChromaDB</span>
+                            <span class="metric-label">Vector Storage</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow Pipeline Section -->
+    <section class="workflow-section" id="workflow">
+        <div class="section-container wide">
+            <h2 class="section-title">
+                <span class="title-accent">15-Phase</span> Decision Pipeline
+            </h2>
+            <p class="section-subtitle">
+                LLM-powered planning with rules-based validation and human oversight
+            </p>
+            
+            <div class="pipeline-container">
+                <div class="pipeline-track">
+                    <div class="pipeline-node" data-phase="1">
+                        <div class="node-badge">1</div>
+                        <h4>Input Validation</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="2">
+                        <div class="node-badge">2</div>
+                        <h4>Context Loader</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="3">
+                        <div class="node-badge">3</div>
+                        <h4>Intent Analysis</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="4">
+                        <div class="node-badge">4</div>
+                        <h4>Goal Setting</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node llm-node" data-phase="5">
+                        <div class="node-badge">5</div>
+                        <h4>LLM Planner</h4>
+                        <span class="node-tag">AI</span>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="6">
+                        <div class="node-badge">6</div>
+                        <h4>Tool Executor</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="7">
+                        <div class="node-badge">7</div>
+                        <h4>Observer</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node rules-node" data-phase="8">
+                        <div class="node-badge">8</div>
+                        <h4>Feasibility Check</h4>
+                        <span class="node-tag">Rules</span>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="9">
+                        <div class="node-badge">9</div>
+                        <h4>Policy Validator</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="10">
+                        <div class="node-badge">10</div>
+                        <h4>Memory Logger</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="11">
+                        <div class="node-badge">11</div>
+                        <h4>Confidence Score</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node human-node" data-phase="12">
+                        <div class="node-badge">12</div>
+                        <h4>Human Approval</h4>
+                        <span class="node-tag">Human</span>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="13">
+                        <div class="node-badge">13</div>
+                        <h4>Decision Router</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="14">
+                        <div class="node-badge">14</div>
+                        <h4>Output Generator</h4>
+                    </div>
+                    <div class="pipeline-connector"></div>
+                    
+                    <div class="pipeline-node" data-phase="15">
+                        <div class="node-badge">15</div>
+                        <h4>Visualization</h4>
+                    </div>
+                </div>
+                
+                <div class="pipeline-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot llm"></span>
+                        <span>LLM-Powered</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot rules"></span>
+                        <span>Rules-Based</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot human"></span>
+                        <span>Human Oversight</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Production Stats Section -->
+    <section class="stats-section" id="stats">
+        <div class="section-container">
+            <h2 class="section-title">
+                <span class="title-accent">Production</span> Statistics
+            </h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-icon">📁</div>
+                    <h3 class="stat-card-number">150+</h3>
+                    <p class="stat-card-label">Total Files</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">💻</div>
+                    <h3 class="stat-card-number">15,000+</h3>
+                    <p class="stat-card-label">Lines of Code</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">🗄️</div>
+                    <h3 class="stat-card-number">40+</h3>
+                    <p class="stat-card-label">Database Tables</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">🤖</div>
+                    <h3 class="stat-card-number">6</h3>
+                    <p class="stat-card-label">Autonomous Agents</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">✅</div>
+                    <h3 class="stat-card-number">90%</h3>
+                    <p class="stat-card-label">Test Coverage</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">🧪</div>
+                    <h3 class="stat-card-number">20+</h3>
+                    <p class="stat-card-label">Test Suites</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-icon">📚</div>
+                    <h3 class="stat-card-number">25+</h3>
+                    <p class="stat-card-label">Documentation</p>
+                </div>
+                
+                <div class="stat-card highlight">
+                    <div class="stat-card-icon">🚀</div>
+                    <h3 class="stat-card-number">95%</h3>
+                    <p class="stat-card-label">Production Ready</p>
+                </div>
+            </div>
+            
+            <div class="tech-stack">
+                <h3 class="tech-title">Technology Stack</h3>
+                <div class="tech-tags">
+                    <span class="tech-tag">Python 3.10+</span>
+                    <span class="tech-tag">LangGraph</span>
+                    <span class="tech-tag">PostgreSQL</span>
+                    <span class="tech-tag">ChromaDB</span>
+                    <span class="tech-tag">FastAPI</span>
+                    <span class="tech-tag">Groq API</span>
+                    <span class="tech-tag">LangChain</span>
+                    <span class="tech-tag">Pydantic</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer / CTA Section -->
+    <section class="footer-cta">
+        <div class="section-container">
+            <h2 class="footer-title">Ready to modernize city governance?</h2>
+            <p class="footer-subtitle">Enterprise-grade AI for municipal decision support</p>
+            
+            <div class="cta-buttons">
+                <button class="cta-primary large">
+                    <span class="cta-text">Get Started</span>
+                    <span class="cta-icon">→</span>
+                </button>
+                <button class="cta-secondary large">
+                    <span class="cta-text">View Documentation</span>
+                </button>
+            </div>
+            
+            <div class="footer-info">
+                <div class="footer-links">
+                    <a href="#" class="footer-link">GitHub Repository</a>
+                    <a href="#" class="footer-link">API Documentation</a>
+                    <a href="#" class="footer-link">Setup Guide</a>
+                    <a href="#" class="footer-link">Architecture</a>
+                </div>
+                
+                <div class="footer-meta">
+                    <p>Apache License 2.0 • Architecture v2.0</p>
+                    <p>© 2026 City Governance System • Production Ready</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/cursor.js"></script>
+    <script src="js/neural-background.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/interactions.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
