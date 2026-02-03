@@ -73,15 +73,37 @@ def create_job(agent_id: str, input_event: Dict[str, Any]) -> str:
         "error": None,
     }
     _JOBS[job_id] = job
+    # persist job (best-effort but raise/log if it fails)
+    try:
+        storage.save_job_record(job)
+    except Exception as e:
+        logger.exception("Failed to persist job record")
+        # keep in-memory job but surface error to caller by re-raising
+        raise
 
-    # persist job
-    storage.save_job_record(job)
-
-    # create queue for subscribers
-    _QUEUES[job_id] = asyncio.Queue()
+    # create queue for subscribers; ensure called from running loop
+    try:
+        _QUEUES[job_id] = asyncio.Queue()
+    except RuntimeError:
+        # No running loop in this thread — create a simple fallback queue
+        # using asyncio.Queue tied to a new loop in a background thread is
+        # complex; log and create a placeholder (non-async) queue entry.
+        logger.warning("No running event loop when creating asyncio.Queue; queue will be None until background worker starts")
+        _QUEUES[job_id] = None
 
     # schedule background processing
-    asyncio.create_task(_process_job(job_id, agent_id, input_event))
+    try:
+        asyncio.create_task(_process_job(job_id, agent_id, input_event))
+    except RuntimeError:
+        # If no running loop, schedule via threading as fallback
+        import threading
+
+        def _run():
+            import asyncio
+
+            asyncio.run(_process_job(job_id, agent_id, input_event))
+
+        threading.Thread(target=_run, daemon=True).start()
 
     return job_id
 
