@@ -1,151 +1,169 @@
+"""
+Minimal FastAPI application — API route handlers removed.
+
+Per request, all existing route definitions were cleared from this module.
+Reintroduce endpoints as needed; this file intentionally exposes an empty
+FastAPI `app` instance so the project can import it without route handlers.
+"""
+
 import logging
-import os
-from fastapi import FastAPI, HTTPException, Query, Header, WebSocket, WebSocketDisconnect, Body
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Any, Optional
-from typing import List, Dict
-from . import storage
-
-from .schemas import InputEvent, DecisionResponse
-from .agents_wrapper import run_agent_sync
+from typing import Any
+from fastapi import FastAPI, HTTPException
+from .schemas import InputEvent
 from . import jobs
+import logging
+import uuid
+import asyncio
+import json
+from datetime import datetime
+from typing import Any
+from fastapi import FastAPI, HTTPException
+from .schemas import InputEvent
+from . import jobs, storage
 
-
-def require_api_key(x_api_key: str = Header(None)):
-    """Compatibility helper kept for future use.
-
-    Current configuration does not require callers to provide an API key.
-    The server will still read `API_KEY` from the environment for outgoing
-    integrations if needed.
-    """
-    return True
+# LLM helper from water_agent
+from water_agent.nodes.llm_helper import get_llm_client
+from water_agent.config import settings as wa_settings
 
 logger = logging.getLogger("backend.server")
 
-app = FastAPI(title="City Governance Agents API", version="0.1")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# App exposes endpoints for queued agent queries. POST will invoke the LLM
+# (in background) and persist the response so GET can return it.
+app = FastAPI(title="City Governance - Query API", version="0.1")
 
 
-@app.post("/api/v1/agents/{agent_id}/decide", response_model=DecisionResponse)
-def agent_decide(
-    agent_id: str,
-    payload: InputEvent,
-    async_: bool = Query(False, alias="async"),
-) -> Any:
-    """Request a decision from an agent.
+@app.post("/api/v1/agents/{agent_id}/query")
+async def submit_agent_query(agent_id: str, payload: InputEvent) -> Any:
+	"""Submit a query to an agent. Currently supports `agent_id == "water"`.
 
-    Query `async=true` is accepted but not yet implemented; returns 501.
-    """
-    # Normalize payload to dict with original key names
-    input_dict = payload.dict(by_alias=True)
+	This handler is `async` so `jobs.create_job` runs inside the application's
+	asyncio event loop and can create asyncio primitives (queues/tasks).
+	The request is queued and processed in background; this returns a `job_id`
+	which can be polled with the GET endpoint below.
+	"""
+	# normalize payload
+	input_dict = payload.dict(by_alias=True)
 
-    logger.info(f"Received decision request for agent={agent_id}")
+	# only allow the water agent
+	if agent_id != "water":
+		raise HTTPException(status_code=400, detail="Only 'water' agent is supported in this endpoint")
 
-    if async_:
-        # create job and return job id wrapper
-        job_id = jobs.create_job(agent_id, input_dict)
-        return DecisionResponse(
-            decision="queued",
-            reason=f"Job queued: {job_id}",
-            recommendation={"job_id": job_id},
-            confidence=0.0,
-        )
+	# Create and persist a job record immediately so GET can find it.
+	job_id = str(uuid.uuid4())
+	now = datetime.utcnow().isoformat() + "Z"
+	job = {
+		"id": job_id,
+		"agent_id": agent_id,
+		"status": "queued",
+		"created_at": now,
+		"started_at": None,
+		"finished_at": None,
+		"result": None,
+		"error": None,
+	}
 
-    result = run_agent_sync(agent_id, input_dict)
+	try:
+		storage.save_job_record(job)
+	except Exception:
+		logger.exception("Failed to save initial job record")
+		raise HTTPException(status_code=500, detail="Failed to persist job record")
 
-    if result is None:
-        raise HTTPException(status_code=500, detail="Agent returned no result")
+	# Background task: call LLM and persist its response so GET returns it.
+	async def _run_llm_and_store(job_id: str, input_event: dict):
+		start_ts = datetime.utcnow().isoformat() + "Z"
+		try:
+			storage.update_job_record(job_id, {"status": "running", "started_at": start_ts})
 
-    # Ensure decision field exists
-    if not isinstance(result, dict) or "decision" not in result:
-        raise HTTPException(status_code=500, detail="Invalid agent response format")
+			llm_client = get_llm_client()
+			if not llm_client:
+				raise RuntimeError("LLM client unavailable")
 
-    return DecisionResponse(**result)
+			# Prompt the LLM for structured JSON tailored to the input
+			prompt = (
+				"You are a helpful municipal data assistant. Given this query, return ONLY valid JSON with keys:"
+				" 'decision' (string), 'reason' (string), and 'details' (object). If the query requests employee info, include"
+				" 'details.employee_count' and 'details.employees' (list of names).\n\nUSER QUERY:\n" + json.dumps(input_event, indent=2, default=str)
+			)
+
+			def _call_llm():
+				return llm_client.chat.completions.create(
+					model=wa_settings.LLM_MODEL,
+					messages=[
+						{"role": "system", "content": "You are a municipal assistant that returns strict JSON."},
+						{"role": "user", "content": prompt},
+					],
+					temperature=wa_settings.LLM_TEMPERATURE,
+					max_tokens=512,
+				)
+
+			response = await asyncio.to_thread(_call_llm)
+			llm_output = ""
+			try:
+				llm_output = response.choices[0].message.content.strip()
+			except Exception:
+				llm_output = str(response)
+
+			# Clean fences
+			if llm_output.startswith("```json"):
+				llm_output = llm_output[7:]
+			elif llm_output.startswith("```"):
+				llm_output = llm_output[3:]
+			if llm_output.endswith("```"):
+				llm_output = llm_output[:-3]
+
+			try:
+				parsed = json.loads(llm_output)
+			except Exception:
+				parsed = {"raw": llm_output}
+
+			result = parsed
+
+			finish_ts = datetime.utcnow().isoformat() + "Z"
+			storage.update_job_record(job_id, {"status": "succeeded", "finished_at": finish_ts, "result": result})
+
+			try:
+				storage.log_decision(agent_id, input_event, result, job_id=job_id)
+			except Exception:
+				logger.exception("Failed to log decision to audit table")
+
+		except Exception as e:
+			logger.exception("LLM invocation failed: %s", e)
+			finish_ts = datetime.utcnow().isoformat() + "Z"
+			storage.update_job_record(job_id, {"status": "failed", "finished_at": finish_ts, "error": str(e)})
+
+	# schedule background execution
+	asyncio.create_task(_run_llm_and_store(job_id, input_dict))
+
+	return {"job_id": job_id, "status": "queued"}
 
 
+@app.get("/api/v1/agents/{agent_id}/query/{job_id}")
+def get_agent_query_result(agent_id: str, job_id: str) -> Any:
+	"""Fetch status/result for a previously submitted query job."""
+	job = jobs.get_job(job_id)
+	if not job:
+		raise HTTPException(status_code=404, detail="Job not found")
+	# Basic check that job matches requested agent_id
+	if job.get("agent_id") != agent_id:
+		raise HTTPException(status_code=400, detail="Job exists but agent_id does not match")
+	return job
 
-@app.get("/api/v1/jobs/{job_id}")
-def get_job_status(job_id: str):
-    job = jobs.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job
 
+@app.get("/api/v1/agents/{agent_id}/query/{job_id}/result")
+def get_agent_decision_result(agent_id: str, job_id: str) -> Any:
+	"""Convenience endpoint: return only the job result (decision) and status.
 
-@app.websocket("/api/v1/ws/jobs/{job_id}")
-async def ws_job_updates(websocket: WebSocket, job_id: str):
-    # Accept WebSocket connection without API key for simplicity
-    await websocket.accept()
-    q = jobs.get_queue(job_id)
-    if q is None:
-        await websocket.send_json({"type": "error", "error": "Job not found"})
-        await websocket.close()
-        return
+	Returns JSON: {"status": <job status>, "result": <decision dict or null>}.
+	"""
+	job = jobs.get_job(job_id)
+	if not job:
+		raise HTTPException(status_code=404, detail="Job not found")
+	if job.get("agent_id") != agent_id:
+		raise HTTPException(status_code=400, detail="Job exists but agent_id does not match")
 
-    try:
-        while True:
-            msg = await q.get()
-            await websocket.send_json(msg)
-            if msg.get("type") in ("result", "error"):
-                # close after final message
-                await websocket.close()
-                break
-    except WebSocketDisconnect:
-        return
+	return {"status": job.get("status"), "result": job.get("result")}
 
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok"}
-
-
-@app.post("/api/v1/coordination/coordinate")
-def coordinate(agent_decisions: List[Dict[str, Any]] = Body(...)):
-    """Coordinate multiple agent decisions via `coordination_agent` package.
-
-    Body: JSON array of decision dicts as produced by agents.
-    """
-    try:
-        from coordination_agent.agent import CoordinationAgent
-
-        coord = CoordinationAgent()
-        result = coord.coordinate(agent_decisions)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/v1/transparency/search")
-def transparency_search(q: str = Query(...), agent_type: Optional[str] = None, limit: int = 10):
-    """Search transparency logs. Uses `transparency_logger` if available."""
-    try:
-        from transparency_logger import TransparencyLogger
-
-        tl = TransparencyLogger()
-        results = tl.search_decisions(query=q, n_results=limit, filter_agent=agent_type)
-        return {"results": results}
-    except Exception as e:
-        # If transparency subsystem not available, return informative message
-        return {"results": [], "note": str(e)}
-
-
-@app.get("/api/v1/decisions")
-def list_decisions(limit: int = Query(50, ge=1, le=100)):
-    """List recent persisted agent decisions (audit)."""
-    results = storage.list_decisions(limit=limit)
-    return {"results": results}
-
-
-@app.get("/api/v1/decisions/{decision_id}")
-def get_decision(decision_id: str):
-    rec = storage.get_decision_record(decision_id)
-    if not rec:
-        raise HTTPException(status_code=404, detail="Decision not found")
-    return rec
+	return {"status": "ok"}
