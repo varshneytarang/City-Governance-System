@@ -67,6 +67,11 @@ class DepartmentState(TypedDict, total=False):
     max_attempts: int
     retry_needed: bool
     
+    # Proactive Coordination
+    coordination_check: Optional[Dict[str, Any]]
+    coordination_approved: bool
+    coordination_recommendations: List[str]
+    
     # Metadata
     started_at: Optional[datetime]
     completed_at: Optional[datetime]

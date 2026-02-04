@@ -262,6 +262,12 @@ class CoordinationQueries:
             CREATE TABLE IF NOT EXISTS coordination_decisions (
                 id SERIAL PRIMARY KEY,
                 coordination_id VARCHAR(100) UNIQUE NOT NULL,
+                agent_type VARCHAR(50),
+                agent_id VARCHAR(100),
+                location VARCHAR(255),
+                resources_needed TEXT[],
+                estimated_cost DECIMAL(15, 2),
+                plan_details JSONB,
                 conflict_type VARCHAR(50),
                 agents_involved TEXT[],
                 resolution_method VARCHAR(20),
@@ -271,7 +277,8 @@ class CoordinationQueries:
                 outcome VARCHAR(50),
                 approval_notes TEXT,
                 created_at TIMESTAMP DEFAULT NOW(),
-                resolved_at TIMESTAMP
+                resolved_at TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'active'
             );
             
             CREATE INDEX IF NOT EXISTS idx_coordination_outcome
@@ -279,6 +286,12 @@ class CoordinationQueries:
             
             CREATE INDEX IF NOT EXISTS idx_coordination_created
             ON coordination_decisions(created_at DESC);
+            
+            CREATE INDEX IF NOT EXISTS idx_coordination_location
+            ON coordination_decisions(location);
+            
+            CREATE INDEX IF NOT EXISTS idx_coordination_status
+            ON coordination_decisions(status);
         """
         try:
             self.db.execute_query(create_table_query)

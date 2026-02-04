@@ -82,6 +82,13 @@ CONTEXT SUMMARY:
 - vaccination campaigns: {len(context.get('vaccination_campaigns', []))}
 - sanitation inspections: {len(context.get('sanitation_inspections', []))}
 
+AVAILABLE TOOLS (use these exact names in steps):
+- disease_surveillance_tool: Get disease incident data for location
+- vaccination_status_tool: Check vaccination coverage in location
+- sanitation_inspection_tool: Get sanitation inspection results
+- mobile_unit_availability: Check available mobile health units
+- public_messaging_capacity: Check public messaging capabilities
+
 Produce 1-2 alternative plans as JSON with this structure:
 {{"plans": [{{"name":"...","steps":[...],"estimated_duration":"X days","estimated_cost":0,"resources_needed":[],"risk_level":"low|medium|high"}}]}}
 """

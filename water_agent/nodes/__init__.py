@@ -4,6 +4,7 @@ from .context_loader import context_loader_node
 from .intent_analyzer import intent_analyzer_node
 from .goal_setter import goal_setter_node
 from .planner import planner_node
+from .coordination_checkpoint import coordination_checkpoint_node
 from .tool_executor import tool_executor_node
 from .observer import observer_node
 from .feasibility_evaluator import feasibility_evaluator_node
@@ -18,6 +19,7 @@ __all__ = [
     "intent_analyzer_node",
     "goal_setter_node",
     "planner_node",
+    "coordination_checkpoint_node",
     "tool_executor_node",
     "observer_node",
     "feasibility_evaluator_node",

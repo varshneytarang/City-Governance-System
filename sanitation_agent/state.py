@@ -66,6 +66,11 @@ class DepartmentState(TypedDict):
     max_attempts: int  # max retries allowed
     retry_needed: bool  # flag for alternative plan retry
     
+    # ========== PROACTIVE COORDINATION ==========
+    coordination_check: Optional[dict]  # result from coordinator conflict check
+    coordination_approved: bool  # did coordinator approve proceeding?
+    coordination_recommendations: List[str]  # coordinator's suggestions
+    
     # ========== METADATA ==========
     started_at: Optional[datetime]
     completed_at: Optional[datetime]

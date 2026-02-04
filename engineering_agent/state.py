@@ -71,6 +71,11 @@ class EngineeringState(TypedDict):
     max_attempts: int  # max retries allowed
     retry_needed: bool  # should retry planning?
     
+    # ========== PROACTIVE COORDINATION ==========
+    coordination_check: Optional[dict]  # result from coordinator conflict check
+    coordination_approved: bool  # did coordinator approve proceeding?
+    coordination_recommendations: List[str]  # coordinator's suggestions
+    
     # ========== METADATA ==========
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
