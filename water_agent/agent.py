@@ -25,6 +25,7 @@ from .nodes import (
     intent_analyzer_node,
     goal_setter_node,
     planner_node,
+    coordination_checkpoint_node,
     tool_executor_node,
     observer_node,
     feasibility_evaluator_node,
@@ -85,6 +86,9 @@ class WaterDepartmentAgent:
         logger.info("  → Adding planner")
         builder.add_node("planner", planner_node)
         
+        logger.info("  → Adding coordination checkpoint (PROACTIVE)")
+        builder.add_node("coordination_checkpoint", coordination_checkpoint_node)
+        
         logger.info("  → Adding tool executor")
         builder.add_node(
             "tool_executor",
@@ -142,8 +146,29 @@ class WaterDepartmentAgent:
         # Goal setter → planner
         builder.add_edge("goal_setter", "planner")
         
-        # Planner → tool executor
-        builder.add_edge("planner", "tool_executor")
+        # Planner → coordination checkpoint (PROACTIVE CHECK)
+        builder.add_edge("planner", "coordination_checkpoint")
+        
+        # Coordination checkpoint: decide next step based on conflicts
+        def route_after_coordination(state: DepartmentState):
+            # If escalating due to conflicts, skip to output
+            if state.get("escalate"):
+                return "output_generator"
+            # If retry needed due to conflicts, go back to planner
+            if state.get("retry_needed"):
+                return "planner"
+            # Otherwise proceed with plan
+            return "tool_executor"
+        
+        builder.add_conditional_edges(
+            "coordination_checkpoint",
+            route_after_coordination,
+            {
+                "planner": "planner",
+                "tool_executor": "tool_executor",
+                "output_generator": "output_generator"
+            }
+        )
         
         # Tool executor → observer
         builder.add_edge("tool_executor", "observer")
@@ -223,6 +248,9 @@ class WaterDepartmentAgent:
                 "goal": "",
                 "plan": {},
                 "alternative_plans": [],
+                "coordination_check": None,
+                "coordination_approved": True,
+                "coordination_recommendations": [],
                 "tool_results": {},
                 "observations": {},
                 "feasible": False,

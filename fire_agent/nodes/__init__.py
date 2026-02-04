@@ -8,6 +8,7 @@ from .context_loader import load_context
 from .intent_analyzer import analyze_intent
 from .goal_setter import set_goals
 from .planner import plan_actions
+from .coordination_checkpoint import coordination_checkpoint_node
 from .tool_executor import execute_tools
 from .observer import observer_node as observe_results
 from .feasibility_evaluator import feasibility_evaluator_node as evaluate_feasibility
@@ -23,6 +24,7 @@ __all__ = [
     "analyze_intent",
     "set_goals",
     "plan_actions",
+    "coordination_checkpoint_node",
     "execute_tools",
     "observe_results",
     "evaluate_feasibility",

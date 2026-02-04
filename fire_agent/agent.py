@@ -30,6 +30,7 @@ from .nodes.context_loader import load_context
 from .nodes.intent_analyzer import analyze_intent
 from .nodes.goal_setter import set_goals
 from .nodes.planner import plan_actions
+from .nodes.coordination_checkpoint import coordination_checkpoint_node
 from .nodes.tool_executor import execute_tools
 from .nodes.observer import observer_node
 from .nodes.feasibility_evaluator import feasibility_evaluator_node
@@ -82,6 +83,9 @@ class FireDepartmentAgent:
         logger.info("  → Adding planner")
         builder.add_node("planner", plan_actions)
         
+        logger.info("  → Adding coordination checkpoint (PROACTIVE)")
+        builder.add_node("coordination_checkpoint", coordination_checkpoint_node)
+        
         logger.info("  → Adding tool executor")
         builder.add_node("tool_executor", execute_tools)
         
@@ -133,8 +137,26 @@ class FireDepartmentAgent:
         # Goal setter → planner
         builder.add_edge("goal_setter", "planner")
         
-        # Planner → tool executor
-        builder.add_edge("planner", "tool_executor")
+        # Planner → coordination checkpoint (PROACTIVE CHECK)
+        builder.add_edge("planner", "coordination_checkpoint")
+        
+        # Coordination checkpoint: decide next step based on conflicts
+        def route_after_coordination(state: DepartmentState):
+            if state.get("escalate"):
+                return "output_generator"
+            if state.get("retry_needed"):
+                return "planner"
+            return "tool_executor"
+        
+        builder.add_conditional_edges(
+            "coordination_checkpoint",
+            route_after_coordination,
+            {
+                "planner": "planner",
+                "tool_executor": "tool_executor",
+                "output_generator": "output_generator"
+            }
+        )
         
         # Tool executor → observer
         builder.add_edge("tool_executor", "observer")

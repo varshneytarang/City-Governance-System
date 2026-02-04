@@ -6,6 +6,7 @@ from .health_planner_llm import health_planner_llm_node as health_planner_node
 from .output_generator import output_generator_node
 from .health_policy_node import health_policy_node
 from .health_confidence_node import health_confidence_node
+from .coordination_checkpoint import coordination_checkpoint_node
 
 __all__ = [
     'health_context_loader',
@@ -13,5 +14,6 @@ __all__ = [
     'health_planner_node',
     'output_generator_node',
     'health_policy_node',
-    'health_confidence_node'
+    'health_confidence_node',
+    'coordination_checkpoint_node'
 ]

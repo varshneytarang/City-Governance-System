@@ -191,6 +191,17 @@ CURRENT CONTEXT:
 - Budget Status: ${context.get('budget', {}).get('available', 0):,}
 - Recent Complaints: {context.get('recent_complaints', 0)}
 
+AVAILABLE TOOLS (use these exact names in steps):
+- check_truck_availability: Check available sanitation trucks
+- check_route_capacity: Check route workload and capacity
+- check_landfill_capacity: Check landfill availability
+- assess_collection_delay: Assess delay risks in collection
+- check_equipment_status: Check truck and equipment condition
+- get_complaint_history: Get complaint history for location
+- check_recycling_center_availability: Check recycling center status
+- estimate_waste_volume: Estimate waste volume for zone
+- check_budget_availability: Verify budget (use 'estimated_cost' parameter)
+
 Return ONLY valid JSON:
 {{
   "plans": [

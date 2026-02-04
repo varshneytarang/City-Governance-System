@@ -132,8 +132,8 @@ class WaterPlanner:
                     {
                         "role": "system",
                         "content": (
-                            "You are a Water Department planning AI. Generate structured plans "
-                            "for departmental operations. Return ONLY valid JSON with this structure: "
+                            "You are an Engineering Department planning AI. Generate structured plans "
+                            "for infrastructure, construction, and road projects. Return ONLY valid JSON with this structure: "
                             '{"plans": [{"name": "Plan A", "steps": ["step1", "step2"], '
                             '"estimated_duration": "X days", "estimated_cost": 50000, '
                             '"resources_needed": ["resource1"], "risk_level": "low"}]}'
@@ -176,7 +176,7 @@ class WaterPlanner:
     def _build_planning_prompt(self, intent: str, goal: str, 
                               context: Dict, input_event: Dict) -> str:
         """Build prompt for LLM"""
-        return f"""Generate a detailed operational plan for the Water Department.
+        return f"""Generate a detailed operational plan for the Engineering Department.
 
 INTENT: {intent}
 GOAL: {goal}
@@ -185,19 +185,23 @@ REQUEST DETAILS:
 {json.dumps(input_event, indent=2)}
 
 CURRENT CONTEXT:
-- Active Projects: {context.get('active_projects', [])}
-- Available Workers: {context.get('worker_info', {}).get('available_count', 'unknown')}
-- Budget Status: ${context.get('budget_status', {}).get('available', 0):,}
+- Active Projects: {context.get('active_projects', {}).get('total_projects', 0)}
+- Available Contractors: {context.get('contractor_info', {}).get('available_count', 'unknown')}
+- Available Equipment: {context.get('equipment_info', {}).get('available_count', 'unknown')}
+- Budget Available: ${context.get('budget_status', {}).get('available', 0):,}
 
 AVAILABLE TOOLS (use these exact names in steps):
-- check_manpower_availability: Check worker availability for a location
+- document_request: Document the incoming request
+- check_active_projects: Check ongoing engineering projects
+- check_contractor_availability: Check available contractors
+- check_equipment_availability: Check available equipment
+- check_budget_availability: Verify budget (use 'required_amount' parameter)
+- check_tender_requirements: Check if tender is required
+- check_monsoon_restrictions: Check weather constraints
+- check_safety_compliance: Verify safety compliance
 - check_schedule_conflicts: Check for scheduling conflicts
-- check_pipeline_health: Assess pipeline conditions
-- check_reservoir_levels: Check water reservoir levels
-- assess_zone_risk: Assess risk level for a location
-- check_budget_availability: Verify budget for estimated cost
-- get_active_projects: Get ongoing projects in location
-- alert_all_workers: Send emergency alert to all workers
+- check_recent_incidents: Check incident history
+- log_decision: Log the final decision
 - activate_emergency_protocol: Activate emergency response
 - document_request: Document the request
 - log_decision: Log the decision
