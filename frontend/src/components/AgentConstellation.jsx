@@ -1,99 +1,119 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import { Droplets, Flame, Wrench, Heart, DollarSign, Trash2 } from 'lucide-react'
+import { Droplets, Flame, Wrench, Heart, DollarSign, Trash2, Network } from 'lucide-react'
+
+const iconsMap = {
+  water: Droplets,
+  fire: Flame,
+  engineering: Wrench,
+  health: Heart,
+  finance: DollarSign,
+  sanitation: Trash2
+}
 
 const agents = [
   {
     id: 'water',
-    name: 'Water',
-    icon: Droplets,
-    color: 'electric-sapphire',
-    capabilities: ['Leak Detection', 'Pressure Monitoring', 'Quality Testing'],
-    position: { top: '20%', left: '50%', rotate: 0 }
+    name: 'Water Services',
+    capabilities: ['Leak detection', 'Consumption forecasting', 'Supply routing']
   },
   {
     id: 'fire',
-    name: 'Fire',
-    icon: Flame,
-    color: 'molten-gold',
-    capabilities: ['Risk Assessment', 'Resource Allocation', 'Emergency Response'],
-    position: { top: '40%', left: '80%', rotate: 60 }
+    name: 'Fire Response',
+    capabilities: ['Risk assessment', 'Dispatch coordination', 'Incident simulation']
   },
   {
     id: 'engineering',
     name: 'Engineering',
-    icon: Wrench,
-    color: 'neon-emerald',
-    capabilities: ['Infrastructure Monitor', 'Maintenance Planning', 'Project Management'],
-    position: { top: '70%', left: '80%', rotate: 120 }
+    capabilities: ['Infrastructure design', 'Load balancing', 'Maintenance scheduling']
   },
   {
     id: 'health',
     name: 'Health',
-    icon: Heart,
-    color: 'nebula-violet',
-    capabilities: ['Disease Tracking', 'Resource Planning', 'Emergency Prep'],
-    position: { top: '80%', left: '50%', rotate: 180 }
+    capabilities: ['Outbreak monitoring', 'Resource allocation', 'Emergency triage']
   },
   {
     id: 'finance',
     name: 'Finance',
-    icon: DollarSign,
-    color: 'molten-gold',
-    capabilities: ['Budget Optimization', 'Cost Analysis', 'Fund Allocation'],
-    position: { top: '70%', left: '20%', rotate: 240 }
+    capabilities: ['Budget planning', 'Grant management', 'Transaction auditing']
   },
   {
     id: 'sanitation',
     name: 'Sanitation',
-    icon: Trash2,
-    color: 'neon-emerald',
-    capabilities: ['Waste Management', 'Route Optimization', 'Resource Tracking'],
-    position: { top: '40%', left: '20%', rotate: 300 }
+    capabilities: ['Route optimization', 'Waste categorization', 'Pickup scheduling']
   }
-]
+].map((a, i, arr) => ({
+  ...a,
+  icon: iconsMap[a.id] || Droplets,
+  position: {
+    top: `${30 + Math.sin((i / arr.length) * Math.PI * 2) * 25}%`,
+    left: `${50 + Math.cos((i / arr.length) * Math.PI * 2) * 35}%`
+  }
+}))
 
-const AgentConstellation = ({ reducedMotion }) => {
+const AgentConstellation = ({ reducedMotion = false }) => {
   const [ref, inView] = useInView({ threshold: 0.2, triggerOnce: true })
-  const [hoveredAgent, setHoveredAgent] = React.useState(null)
+  const [hoveredAgent, setHoveredAgent] = useState(null)
 
   return (
-    <section ref={ref} className="relative py-32 px-6 bg-white">
+    <section ref={ref} className="relative py-32 px-6 bg-transparent overflow-hidden">
+      {!reducedMotion && (
+        <>
+          <div className="absolute -left-40 -top-20 w-96 h-96 rounded-full bg-gradient-to-br from-[#0ea5e9]/15 to-[#f59e0b]/12 blur-3xl opacity-60 pointer-events-none transform -rotate-12" />
+          <div className="absolute -right-32 -bottom-24 w-[28rem] h-[28rem] rounded-full bg-gradient-to-tr from-[#a78bfa]/14 to-[#34d399]/12 blur-3xl opacity-60 pointer-events-none transform rotate-6" />
+        </>
+      )}
+
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-20"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-6xl font-bold font-heading mb-6">
-            <span className="text-gradient">Department Agents</span>
+          <h2 className="text-3xl md:text-4xl font-bold font-heading text-gov-navy mb-3">
+            Departmental Ecosystem
           </h2>
-          <p className="text-xl text-gov-gray max-w-3xl mx-auto">
-            Six specialized AI agents working in harmony, each an expert in their domain
+          <p className="text-gov-darkBlue/70 text-lg">
+            Six specialized agents coordinated by intelligent hub
           </p>
         </motion.div>
 
-        {/* Constellation Container */}
         <div className="relative w-full max-w-4xl mx-auto" style={{ height: '600px' }}>
-          {/* Central Coordination Node */}
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={inView ? { scale: 1, opacity: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            transition={{ type: 'spring', stiffness: 200, delay: 0.3 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
           >
             <div className={`w-24 h-24 rounded-full professional-card flex items-center justify-center shadow-professional ${
               reducedMotion ? '' : 'animate-pulse-slow'
             }`}>
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gov-navy to-accent-gold shadow-gold-glow"></div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gov-navy to-accent-gold shadow-gold-glow" />
             </div>
-            <p className="text-center mt-3 font-bold text-sm text-gov-navy">Coordination Hub</p>
+            <p className="text-center mt-3 font-semibold text-gov-navy text-sm">Coordinator</p>
           </motion.div>
 
-          {/* Agent Orbs */}
+          {/* Connection Lines (always visible) */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            {agents.map((agent, index) => (
+              <motion.line
+                key={`line-${agent.id}`}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.28 }}
+                transition={{ duration: 1.0, delay: 0.2 + index * 0.06 }}
+                x1="50%"
+                y1="50%"
+                x2={agent.position.left}
+                y2={agent.position.top}
+                stroke="rgba(59,130,246,0.22)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+              />
+            ))}
+          </svg>
+
           {agents.map((agent, index) => (
             <AgentOrb
               key={agent.id}
@@ -105,34 +125,24 @@ const AgentConstellation = ({ reducedMotion }) => {
               onHover={setHoveredAgent}
             />
           ))}
-
-          {/* Connection Lines */}
-          {!reducedMotion && inView && (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              {agents.map((agent, index) => (
-                <motion.line
-                  key={`line-${agent.id}`}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.3 }}
-                  transition={{ duration: 1.5, delay: 0.5 + index * 0.1 }}
-                  x1="50%"
-                  y1="50%"
-                  x2={agent.position.left}
-                  y2={agent.position.top}
-                  stroke="url(#gradient)"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-              ))}
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#d4af37" stopOpacity="0.3" />
-                </linearGradient>
-              </defs>
-            </svg>
-          )}
         </div>
+
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 1.2 }}
+          className="flex justify-center items-center gap-8 mt-16 text-sm"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-gov-darkBlue font-medium">Online</span>
+          </div>
+          <div className="h-4 w-px bg-gray-300" />
+          <span className="text-gray-600">6 Active Agents</span>
+          <div className="h-4 w-px bg-gray-300" />
+          <span className="text-gray-600">99.9% Uptime</span>
+        </motion.div>
       </div>
     </section>
   )
@@ -149,33 +159,26 @@ const AgentOrb = ({ agent, index, inView, reducedMotion, isHovered, onHover }) =
       drag
       dragMomentum={false}
       whileDrag={{ scale: 1.1, zIndex: 1000 }}
-      className="absolute cursor-grab active:cursor-grabbing"
-      style={{ 
-        top: agent.position.top, 
+      className="absolute cursor-grab active:cursor-grabbing transform -translate-x-1/2 -translate-y-1/2"
+      style={{
+        top: agent.position.top,
         left: agent.position.left,
-        x: '-50%',
-        y: '-50%'
       }}
+      id={`agent-dom-${agent.id}`}
       onMouseEnter={() => onHover(agent.id)}
       onMouseLeave={() => onHover(null)}
     >
       <div className="relative">
-        {/* Orb */}
         <div
           className={`w-20 h-20 rounded-full professional-card flex items-center justify-center transition-all duration-500 ${
             isHovered ? 'scale-110 shadow-elevated ring-2 ring-accent-gold' : 'shadow-soft'
           } ${reducedMotion ? '' : 'hover:animate-float'}`}
         >
-          <Icon 
-            size={32} 
-            className="text-gov-blue"
-          />
+          <Icon size={32} className="text-gov-blue" />
         </div>
 
-        {/* Label */}
         <p className="text-center mt-2 font-semibold text-sm text-gov-navy">{agent.name}</p>
 
-        {/* Capabilities Popup */}
         {isHovered && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -186,7 +189,7 @@ const AgentOrb = ({ agent, index, inView, reducedMotion, isHovered, onHover }) =
             <ul className="space-y-1 text-xs text-gov-gray">
               {agent.capabilities.map((cap, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-accent-gold"></span>
+                  <span className="w-1 h-1 rounded-full bg-accent-gold" />
                   {cap}
                 </li>
               ))}

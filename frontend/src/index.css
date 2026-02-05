@@ -76,4 +76,41 @@
     @apply text-accent-gold;
     text-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
   }
+
+  /* Decorative background animations */
+  .animate-slow-translate {
+    animation: slowTranslate 14s ease-in-out infinite;
+  }
+
+  .animate-slow-translate-reverse {
+    animation: slowTranslateReverse 16s ease-in-out infinite;
+  }
+
+  .animate-slow-line {
+    stroke-dasharray: 800;
+    stroke-dashoffset: 800;
+    animation: drawLine 8s linear infinite;
+  }
+
+  .delay-1 {
+    animation-delay: 2s;
+  }
+
+  @keyframes slowTranslate {
+    0% { transform: translateY(0) translateX(0) rotate(-12deg); }
+    50% { transform: translateY(-18px) translateX(8px) rotate(-12deg); }
+    100% { transform: translateY(0) translateX(0) rotate(-12deg); }
+  }
+
+  @keyframes slowTranslateReverse {
+    0% { transform: translateY(0) translateX(0) rotate(6deg); }
+    50% { transform: translateY(20px) translateX(-12px) rotate(6deg); }
+    100% { transform: translateY(0) translateX(0) rotate(6deg); }
+  }
+
+  @keyframes drawLine {
+    0% { stroke-dashoffset: 800; opacity: 0.2; }
+    50% { stroke-dashoffset: 0; opacity: 0.08; }
+    100% { stroke-dashoffset: -800; opacity: 0.02; }
+  }
 }

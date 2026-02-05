@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import NeuralBackground from './components/NeuralBackground'
 import CustomCursor from './components/CustomCursor'
 import Hero from './components/Hero'
-import AgentConstellation from './components/AgentConstellation'
+import DepartmentalEcosystem from './components/DepartmentalEcosystem'
 import CoordinationBrain from './components/CoordinationBrain'
 import TransparencyVault from './components/TransparencyVault'
 import WorkflowPipeline from './components/WorkflowPipeline'
@@ -13,30 +13,62 @@ import AccessibilityControls from './components/AccessibilityControls'
 import ApiTestPage from './components/ApiTestPage'
 import Login from './components/Login'
 import Register from './components/Register'
+import Dashboard from './components/Dashboard'
+import WaterAgentPage from './components/agents/WaterAgentPage'
+import { FireAgentPage, EngineeringAgentPage, HealthAgentPage, FinanceAgentPage, SanitationAgentPage } from './components/agents/AgentPages'
 
 function App() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [highContrast, setHighContrast] = useState(false)
-  const [currentPage, setCurrentPage] = useState('home') // 'home', 'test', 'login', 'register'
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentPage, setCurrentPage] = useState('home') // 'home', 'test', 'dashboard', or 'agent'
+  const [currentAgent, setCurrentAgent] = useState('') // 'water', 'fire', 'engineering', 'health', 'finance', 'sanitation'
 
   useEffect(() => {
     // Check for prefers-reduced-motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     setReducedMotion(mediaQuery.matches)
     
-    // Check URL hash for navigation
-    const hash = window.location.hash.slice(1) || 'home'
-    setCurrentPage(hash)
-    
     // Check authentication status
     checkAuth()
     
+    // Check URL hash for navigation
+    const hash = window.location.hash
+    if (hash === '#test') {
+      setCurrentPage('test')
+    } else if (hash === '#login') {
+      setCurrentPage('login')
+    } else if (hash === '#register') {
+      setCurrentPage('register')
+    } else if (hash === '#dashboard') {
+      setCurrentPage('dashboard')
+    } else if (hash.startsWith('#agent/')) {
+      setCurrentPage('agent')
+      setCurrentAgent(hash.replace('#agent/', ''))
+    } else {
+      setCurrentPage('home')
+      setCurrentAgent('')
+    }
+    
     // Listen for hash changes
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(1) || 'home'
-      setCurrentPage(hash)
+      const hash = window.location.hash
+      if (hash === '#test') {
+        setCurrentPage('test')
+      } else if (hash === '#login') {
+        setCurrentPage('login')
+      } else if (hash === '#register') {
+        setCurrentPage('register')
+      } else if (hash === '#dashboard') {
+        setCurrentPage('dashboard')
+      } else if (hash.startsWith('#agent/')) {
+        setCurrentPage('agent')
+        setCurrentAgent(hash.replace('#agent/', ''))
+      } else {
+        setCurrentPage('home')
+        setCurrentAgent('')
+      }
     }
     
     window.addEventListener('hashchange', handleHashChange)
@@ -89,6 +121,31 @@ function App() {
   if (currentPage === 'register') {
     return <Register onNavigate={handleNavigate} />
   }
+  // Render dashboard if selected
+  if (currentPage === 'dashboard') {
+    return <Dashboard reducedMotion={reducedMotion} />
+  }
+
+  // Render agent page if selected
+  if (currentPage === 'agent') {
+    switch (currentAgent) {
+      case 'water':
+        return <WaterAgentPage />
+      case 'fire':
+        return <FireAgentPage />
+      case 'engineering':
+        return <EngineeringAgentPage />
+      case 'health':
+        return <HealthAgentPage />
+      case 'finance':
+        return <FinanceAgentPage />
+      case 'sanitation':
+        return <SanitationAgentPage />
+      default:
+        window.location.hash = ''
+        return null
+    }
+  }
 
   return (
     <div className={`min-h-screen ${highContrast ? 'contrast-150' : ''}`}>
@@ -119,6 +176,12 @@ function App() {
           </a>
         )}
         <a
+          href="#dashboard"
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
+        >
+          📊 Dashboard
+        </a>
+        <a
           href="#test"
           className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
         >
@@ -143,7 +206,7 @@ function App() {
       {/* Main Content */}
       <main className="relative z-10">
         <Hero reducedMotion={reducedMotion} />
-        <AgentConstellation reducedMotion={reducedMotion} />
+        <DepartmentalEcosystem reducedMotion={reducedMotion} />
         <CoordinationBrain reducedMotion={reducedMotion} />
         <TransparencyVault reducedMotion={reducedMotion} />
         <WorkflowPipeline reducedMotion={reducedMotion} />
