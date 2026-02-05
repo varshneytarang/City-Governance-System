@@ -95,6 +95,25 @@ const AgentConstellation = ({ reducedMotion }) => {
             <p className="text-center mt-3 font-bold text-sm text-gov-navy">Coordination Hub</p>
           </motion.div>
 
+          {/* Connection Lines (always visible) */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            {agents.map((agent, index) => (
+              <motion.line
+                key={`line-${agent.id}`}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.28 }}
+                transition={{ duration: 1.0, delay: 0.2 + index * 0.06 }}
+                x1="50%"
+                y1="50%"
+                x2={agent.position.left}
+                y2={agent.position.top}
+                stroke="rgba(59,130,246,0.22)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+              />
+            ))}
+          </svg>
+
           {agents.map((agent, index) => (
             <AgentOrb
               key={agent.id}
@@ -106,26 +125,6 @@ const AgentConstellation = ({ reducedMotion }) => {
               onHover={setHoveredAgent}
             />
           ))}
-
-          {!reducedMotion && inView && (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              {agents.map((agent, index) => (
-                <motion.line
-                  key={`line-${agent.id}`}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.28 }}
-                  transition={{ duration: 1.2, delay: 0.4 + index * 0.08 }}
-                  x1="50%"
-                  y1="50%"
-                  x2={agent.position.left}
-                  y2={agent.position.top}
-                  stroke="rgba(59,130,246,0.22)"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-              ))}
-            </svg>
-          )}
         </div>
       </div>
     </section>
@@ -143,12 +142,10 @@ const AgentOrb = ({ agent, index, inView, reducedMotion, isHovered, onHover }) =
       drag
       dragMomentum={false}
       whileDrag={{ scale: 1.1, zIndex: 1000 }}
-      className="absolute cursor-grab active:cursor-grabbing"
+      className="absolute cursor-grab active:cursor-grabbing transform -translate-x-1/2 -translate-y-1/2"
       style={{
         top: agent.position.top,
         left: agent.position.left,
-        x: '-50%',
-        y: '-50%'
       }}
       id={`agent-dom-${agent.id}`}
       onMouseEnter={() => onHover(agent.id)}
