@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import NeuralBackground from './components/NeuralBackground'
 import CustomCursor from './components/CustomCursor'
 import Hero from './components/Hero'
-import AgentConstellation from './components/AgentConstellation'
+import DepartmentalEcosystem from './components/DepartmentalEcosystem'
 import CoordinationBrain from './components/CoordinationBrain'
 import TransparencyVault from './components/TransparencyVault'
 import WorkflowPipeline from './components/WorkflowPipeline'
@@ -123,7 +123,7 @@ function App() {
       {/* Main Content */}
       <main className="relative z-10">
         <Hero reducedMotion={reducedMotion} />
-        <AgentConstellation reducedMotion={reducedMotion} />
+        <DepartmentalEcosystem reducedMotion={reducedMotion} />
         <CoordinationBrain reducedMotion={reducedMotion} />
         <TransparencyVault reducedMotion={reducedMotion} />
         <WorkflowPipeline reducedMotion={reducedMotion} />
