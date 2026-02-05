@@ -11,28 +11,45 @@ import ProductionStats from './components/ProductionStats'
 import Footer from './components/Footer'
 import AccessibilityControls from './components/AccessibilityControls'
 import ApiTestPage from './components/ApiTestPage'
+import Dashboard from './components/Dashboard'
+import WaterAgentPage from './components/agents/WaterAgentPage'
+import { FireAgentPage, EngineeringAgentPage, HealthAgentPage, FinanceAgentPage, SanitationAgentPage } from './components/agents/AgentPages'
 
 function App() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [highContrast, setHighContrast] = useState(false)
-  const [currentPage, setCurrentPage] = useState('home') // 'home' or 'test'
+  const [currentPage, setCurrentPage] = useState('home') // 'home', 'test', 'dashboard', or 'agent'
+  const [currentAgent, setCurrentAgent] = useState('') // 'water', 'fire', 'engineering', 'health', 'finance', 'sanitation'
 
   useEffect(() => {
     // Check for prefers-reduced-motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     setReducedMotion(mediaQuery.matches)
     
-    // Check URL hash for test page
-    if (window.location.hash === '#test') {
+    // Check URL hash for pages
+    const hash = window.location.hash
+    if (hash === '#test') {
       setCurrentPage('test')
+    } else if (hash === '#dashboard') {
+      setCurrentPage('dashboard')
+    } else if (hash.startsWith('#agent/')) {
+      setCurrentPage('agent')
+      setCurrentAgent(hash.replace('#agent/', ''))
     }
     
     // Listen for hash changes
     const handleHashChange = () => {
-      if (window.location.hash === '#test') {
+      const hash = window.location.hash
+      if (hash === '#test') {
         setCurrentPage('test')
+      } else if (hash === '#dashboard') {
+        setCurrentPage('dashboard')
+      } else if (hash.startsWith('#agent/')) {
+        setCurrentPage('agent')
+        setCurrentAgent(hash.replace('#agent/', ''))
       } else {
         setCurrentPage('home')
+        setCurrentAgent('')
       }
     }
     
@@ -45,15 +62,47 @@ function App() {
     return <ApiTestPage />
   }
 
+  // Render dashboard if selected
+  if (currentPage === 'dashboard') {
+    return <Dashboard reducedMotion={reducedMotion} />
+  }
+
+  // Render agent page if selected
+  if (currentPage === 'agent') {
+    switch (currentAgent) {
+      case 'water':
+        return <WaterAgentPage />
+      case 'fire':
+        return <FireAgentPage />
+      case 'engineering':
+        return <EngineeringAgentPage />
+      case 'health':
+        return <HealthAgentPage />
+      case 'finance':
+        return <FinanceAgentPage />
+      case 'sanitation':
+        return <SanitationAgentPage />
+      default:
+        window.location.hash = ''
+        return null
+    }
+  }
+
   return (
     <div className={`min-h-screen ${highContrast ? 'contrast-150' : ''}`}>
       {/* Navigation Toggle */}
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-4 right-4 z-50 flex gap-3">
+        <a
+          href="#dashboard"
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
+        >
+          📊 Dashboard
+        </a>
         <a
           href="#test"
           className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
         >
-          🧪 API Test Console
+          🧪 API Test
         </a>
       </div>
 
