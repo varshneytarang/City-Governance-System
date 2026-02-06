@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { Droplets, Flame, Wrench, Heart, DollarSign, Trash2, Network } from 'lucide-react'
@@ -53,6 +54,7 @@ const agents = [
 }))
 
 const AgentConstellation = ({ reducedMotion = false }) => {
+  const navigate = useNavigate()
   const [ref, inView] = useInView({ threshold: 0.2, triggerOnce: true })
   const [hoveredAgent, setHoveredAgent] = useState(null)
 
@@ -95,23 +97,29 @@ const AgentConstellation = ({ reducedMotion = false }) => {
             <p className="text-center mt-3 font-semibold text-gov-navy text-sm">Coordinator</p>
           </motion.div>
 
-          {/* Connection Lines (always visible) */}
+          {/* Connection Lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {agents.map((agent, index) => (
-              <motion.line
-                key={`line-${agent.id}`}
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.28 }}
-                transition={{ duration: 1.0, delay: 0.2 + index * 0.06 }}
-                x1="50%"
-                y1="50%"
-                x2={agent.position.left}
-                y2={agent.position.top}
-                stroke="rgba(59,130,246,0.22)"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-              />
-            ))}
+            {agents.map((agent, index) => {
+              // Calculate actual pixel positions from percentages
+              const centerX = '50%'
+              const centerY = '50%'
+              
+              return (
+                <motion.line
+                  key={`line-${agent.id}`}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={inView ? { pathLength: 1, opacity: 0.28 } : {}}
+                  transition={{ duration: 1.0, delay: 0.2 + index * 0.06 }}
+                  x1={centerX}
+                  y1={centerY}
+                  x2={agent.position.left}
+                  y2={agent.position.top}
+                  stroke="rgba(59,130,246,0.22)"
+                  strokeWidth="2"
+                  strokeDasharray="4 4"
+                />
+              )
+            })}
           </svg>
 
           {agents.map((agent, index) => (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { Droplets, Flame, Wrench, Heart, DollarSign, Trash2, Zap } from 'lucide-react'
@@ -13,6 +14,7 @@ const agents = [
 ]
 
 const AgentConstellationInteractive = ({ reducedMotion = false }) => {
+  const navigate = useNavigate()
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true })
   const [hoveredAgent, setHoveredAgent] = useState(null)
   const [selectedAgent, setSelectedAgent] = useState(null)
@@ -476,7 +478,7 @@ const AgentConstellationInteractive = ({ reducedMotion = false }) => {
                     
                     <div className="grid grid-cols-2 gap-3">
                       <motion.button
-                        onClick={() => window.location.hash = `#agent/${agent?.id}`}
+                        onClick={() => navigate(`/agent/${agent?.id}`)}
                         className="py-3 rounded-xl font-semibold text-white transition-all"
                         style={{ 
                           background: `linear-gradient(135deg, ${agent?.color}, ${agent?.accent})`,

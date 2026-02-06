@@ -153,10 +153,10 @@ const TransparencyVault = ({ reducedMotion }) => {
                     {/* Expanded Details */}
                     {selectedDecision === decision.id && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="mt-3 pt-3 border-t border-gray-200 text-xs text-gov-gray"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mt-3 pt-3 border-t border-gray-200 text-xs text-gov-gray overflow-hidden"
                       >
                         <p className="mb-2">
                           <strong>Vector ID:</strong> chroma_{decision.id}_{Math.random().toString(36).substr(2, 9)}

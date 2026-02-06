@@ -1,8 +1,10 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Droplets, Activity, TrendingUp, CheckCircle, Clock, MapPin, Home } from 'lucide-react'
 
 const WaterAgentPage = () => {
+  const navigate = useNavigate()
   const stats = [
     { label: 'Active Pipelines', value: '487', icon: Activity, color: '#3b82f6' },
     { label: 'Daily Consumption', value: '2.4M L', icon: TrendingUp, color: '#14b8a6' },
@@ -32,13 +34,15 @@ const WaterAgentPage = () => {
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <a 
-                href="#" 
+              <motion.button 
+                onClick={() => navigate('/')}
                 className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <Home size={20} />
                 <span className="text-sm font-medium">Home</span>
-              </a>
+              </motion.button>
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -210,10 +214,11 @@ const WaterAgentPage = () => {
               </div>
               <div className="h-3 bg-white rounded-full overflow-hidden border border-blue-200">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: '94%' }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 origin-left"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 0.94 }}
                   transition={{ duration: 1, delay: 0.9 }}
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>
@@ -225,10 +230,11 @@ const WaterAgentPage = () => {
               </div>
               <div className="h-3 bg-white rounded-full overflow-hidden border border-green-200">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: '87%' }}
+                  className="h-full bg-gradient-to-r from-green-500 to-green-600 origin-left"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 0.87 }}
                   transition={{ duration: 1, delay: 1.0 }}
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>
@@ -240,10 +246,11 @@ const WaterAgentPage = () => {
               </div>
               <div className="h-3 bg-white rounded-full overflow-hidden border border-purple-200">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: '91%' }}
+                  className="h-full bg-gradient-to-r from-purple-500 to-purple-600 origin-left"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 0.91 }}
                   transition={{ duration: 1, delay: 1.1 }}
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>

@@ -142,11 +142,23 @@ const DepartmentalEcosystem = ({ reducedMotion = false }) => {
   const [hoveredAgent, setHoveredAgent] = useState(null)
     const [time, setTime] = useState(0)
     const [isPaused, setIsPaused] = useState(false)
+    const [isAnimating, setIsAnimating] = useState(false)
+
+    // Delay animation start until entrance completes
+    useEffect(() => {
+      if (inView && !isAnimating) {
+        // Wait for entrance animation to complete (0.6s + longest delay)
+        const timer = setTimeout(() => {
+          setIsAnimating(true)
+        }, 1200)
+        return () => clearTimeout(timer)
+      }
+    }, [inView, isAnimating])
 
     // Animate orbit rotation using requestAnimationFrame for smoothness
     // Clamp large frame deltas to avoid jumpy frames when the tab resumes
     useEffect(() => {
-      if (reducedMotion) return
+      if (reducedMotion || !isAnimating) return
 
       let raf = null
       let last = performance.now()
@@ -165,7 +177,7 @@ const DepartmentalEcosystem = ({ reducedMotion = false }) => {
 
       raf = requestAnimationFrame(step)
       return () => cancelAnimationFrame(raf)
-    }, [reducedMotion, isPaused])
+    }, [reducedMotion, isPaused, isAnimating])
 
     // Pause rotation only when hovering a specific agent
     useEffect(() => {
@@ -398,7 +410,7 @@ const CoordinatorHub = ({ inView, reducedMotion }) => {
       animate={inView ? { scale: 1, opacity: 1 } : {}}
       transition={{ duration: 0.8, delay: 0.3, type: 'spring', stiffness: 200, damping: 20 }}
       className="absolute z-50"
-      style={{ left: `${ORBIT.centerX}px`, top: `${ORBIT.centerY}px`, transform: 'translate(-50%, -50%)' }}
+      style={{ left: `calc(${ORBIT.centerX}px - 50px)`, top: `calc(${ORBIT.centerY}px - 50px)`, transform: 'translate(-50%, -50%)' }}
     >
       {/* Outer pulsing ring */}
       {!reducedMotion && (

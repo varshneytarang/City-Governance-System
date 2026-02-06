@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import WaterAgentPage from './WaterAgentPage'
 import { Flame, Wrench, Heart, DollarSign, Trash2 } from 'lucide-react'
 
@@ -176,22 +177,24 @@ export const SanitationAgentPage = () => {
 
 // Reusable Template Component
 const WaterAgentPageTemplate = ({ icon: Icon, title, subtitle, color, accentColor, stats, zones, recentActions }) => {
+  const navigate = useNavigate()
+  
   return (
     <>
       <header className="border-b border-gray-200 bg-white sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <a 
-                href="#" 
-                className="p-2 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2"
+              <button 
+                onClick={() => navigate('/')}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer"
                 style={{ background: `${color}10`, color: color }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 <span className="text-sm font-medium">Home</span>
-              </a>
+              </button>
               <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
                 <div 

@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AgentConstellationInteractive from './AgentConstellationInteractive'
 import { Activity, Clock, CheckCircle, AlertTriangle, TrendingUp, Settings, Home } from 'lucide-react'
 
 const Dashboard = ({ reducedMotion = false }) => {
+  const navigate = useNavigate()
   const [selectedTimeframe, setSelectedTimeframe] = useState('24h')
   const [hoveredStat, setHoveredStat] = useState(null)
 
@@ -147,8 +149,8 @@ const Dashboard = ({ reducedMotion = false }) => {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <motion.a 
-                href="#" 
+              <motion.button 
+                onClick={() => navigate('/')}
                 className="p-2 rounded-lg bg-gradient-to-br from-[#1e3a5f] to-[#2c5282] text-gray-300 hover:text-white transition-all flex items-center gap-2 border border-white/10 hover:border-[#d4af37]/50"
                 title="Back to Home"
                 whileHover={{ scale: 1.05, y: -2 }}
@@ -156,7 +158,7 @@ const Dashboard = ({ reducedMotion = false }) => {
               >
                 <Home size={20} />
                 <span className="text-sm font-medium">Home</span>
-              </motion.a>
+              </motion.button>
               <div className="h-8 w-px bg-white/10" />
               <div>
                 <motion.h1 
@@ -550,9 +552,9 @@ const Dashboard = ({ reducedMotion = false }) => {
                 </div>
                 <div className="h-2.5 bg-[#0a0e1a]/50 rounded-full overflow-hidden border border-white/5">
                   <motion.div
-                    className={`h-full bg-gradient-to-r ${metric.color} relative`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${metric.value}%` }}
+                    className={`h-full bg-gradient-to-r ${metric.color} relative origin-left`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: metric.value / 100 }}
                     transition={{ 
                       duration: 1.5, 
                       delay: metric.delay + 0.3,
@@ -561,6 +563,7 @@ const Dashboard = ({ reducedMotion = false }) => {
                     }}
                     style={{
                       boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
+                      width: '100%'
                     }}
                   >
                     {/* Animated shimmer */}
