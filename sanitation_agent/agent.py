@@ -310,18 +310,7 @@ class SanitationDepartmentAgent:
         if missing:
             raise ValueError(f"Missing required fields: {missing}")
         
-        valid_types = [
-            "route_change_request",
-            "emergency_collection",
-            "equipment_maintenance",
-            "schedule_adjustment",
-            "landfill_routing",
-            "complaint_response",
-            "capacity_assessment"
-        ]
-        
-        if request.get("type") not in valid_types:
-            raise ValueError(f"Invalid request type. Must be one of: {valid_types}")
+        # Allow any request type - agent will handle all queries
     
     def visualize(self, output_file: str = "sanitation_agent_graph.png") -> str:
         """

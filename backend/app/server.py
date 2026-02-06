@@ -196,37 +196,43 @@ def _determine_agent_type(request_type: str) -> str:
 	# Water department request types
 	water_types = [
 		"capacity_query", "schedule_shift_request", "emergency_response",
-		"maintenance_request", "pipeline_repair", "water_quality_check"
+		"maintenance_request", "pipeline_repair", "water_quality_check",
+		"water_general_query"
 	]
 	
 	# Engineering department request types
 	engineering_types = [
 		"project_planning", "infrastructure_assessment", "road_repair",
-		"bridge_inspection", "construction_approval"
+		"bridge_inspection", "construction_approval",
+		"engineering_general_query"
 	]
 	
 	# Fire department request types
 	fire_types = [
 		"fire_emergency", "fire_inspection", "fire_safety_assessment",
-		"hazmat_response", "rescue_operation"
+		"hazmat_response", "rescue_operation",
+		"fire_general_query"
 	]
 	
 	# Sanitation department request types
 	sanitation_types = [
 		"waste_collection", "street_cleaning", "sanitation_inspection",
-		"recycling_request", "hazardous_waste_disposal"
+		"recycling_request", "hazardous_waste_disposal",
+		"sanitation_general_query"
 	]
 	
 	# Health department request types
 	health_types = [
 		"health_inspection", "disease_outbreak", "vaccination_campaign",
-		"restaurant_inspection", "public_health_assessment"
+		"restaurant_inspection", "public_health_assessment",
+		"health_general_query"
 	]
 	
 	# Finance department request types
 	finance_types = [
 		"budget_approval", "cost_estimation", "financial_audit",
-		"revenue_forecast", "expenditure_review"
+		"revenue_forecast", "expenditure_review",
+		"finance_general_query"
 	]
 	
 	if request_type in water_types:
