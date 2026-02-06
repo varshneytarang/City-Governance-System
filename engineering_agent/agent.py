@@ -323,20 +323,7 @@ class EngineeringDepartmentAgent:
         if missing:
             raise ValueError(f"Missing required fields: {missing}")
         
-        valid_types = [
-            "project_approval_request",
-            "tender_evaluation",
-            "contractor_assignment",
-            "safety_inspection",
-            "equipment_allocation",
-            "budget_request",
-            "maintenance_scheduling",
-            "emergency_infrastructure"
-        ]
-        
-        if request.get("type") not in valid_types:
-            logger.warning(f"Unknown request type: {request.get('type')}")
-            # Don't fail - just log warning
+        # Allow any request type - agent will handle all queries
     
     def visualize(self, output_file: str = "engineering_agent_graph.png") -> str:
         """Generate Mermaid diagram of the agent workflow"""

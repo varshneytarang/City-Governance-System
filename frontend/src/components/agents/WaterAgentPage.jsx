@@ -1,10 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Droplets, Activity, TrendingUp, CheckCircle, Clock, MapPin, Home } from 'lucide-react'
+import { Droplets, Activity, TrendingUp, CheckCircle, Clock, MapPin, Home, MessageSquare } from 'lucide-react'
+import AgentChatBot from './AgentChatBot'
 
 const WaterAgentPage = () => {
   const navigate = useNavigate()
+  const [showChat, setShowChat] = useState(true)
+  const [isChatMinimized, setIsChatMinimized] = useState(false)
+  
   const stats = [
     { label: 'Active Pipelines', value: '487', icon: Activity, color: '#3b82f6' },
     { label: 'Daily Consumption', value: '2.4M L', icon: TrendingUp, color: '#14b8a6' },
@@ -28,9 +32,38 @@ const WaterAgentPage = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50 shadow-sm">
+    <div className="min-h-screen bg-white flex">
+      {/* Chatbot Sidebar */}
+      {showChat && (
+        <div className="fixed left-0 top-0 bottom-0 z-40">
+          <AgentChatBot
+            agentType="water"
+            agentName="Water Management"
+            agentColor="#3b82f6"
+            onClose={() => setShowChat(false)}
+            isMinimized={isChatMinimized}
+            onToggleMinimize={() => setIsChatMinimized(!isChatMinimized)}
+          />
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 ${showChat && !isChatMinimized ? 'ml-[320px]' : 'ml-0'}`}>
+        {/* Floating Chat Toggle Button */}
+        {!showChat && (
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            onClick={() => setShowChat(true)}
+            className="fixed left-4 bottom-4 z-50 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+            title="Open Chat"
+          >
+            <MessageSquare size={24} />
+          </motion.button>
+        )}
+
+        {/* Header */}
+        <header className="border-b border-gray-200 bg-white sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -257,6 +290,7 @@ const WaterAgentPage = () => {
           </div>
         </motion.div>
       </div>
+    </div>
     </div>
   )
 }
