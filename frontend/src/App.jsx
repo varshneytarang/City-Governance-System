@@ -11,6 +11,8 @@ import { WaterPage, FirePage, EngineeringPage, HealthPage, FinancePage, Sanitati
 function App() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [highContrast, setHighContrast] = useState(false)
+  const [currentPage, setCurrentPage] = useState('home') // 'home', 'test', 'dashboard', or 'agent'
+  const [currentAgent, setCurrentAgent] = useState('') // 'water', 'fire', 'engineering', 'health', 'finance', 'sanitation'
 
   useEffect(() => {
     // Check for prefers-reduced-motion

@@ -23,6 +23,9 @@ from . import jobs, storage
 # Import Coordination Agent
 from coordination_agent.agent import CoordinationAgent
 
+# Import Auth Router
+from .routes.auth import router as auth_router
+
 logger = logging.getLogger("backend.server")
 
 app = FastAPI(title="City Governance - Query API", version="0.2")
@@ -69,6 +72,10 @@ async def shutdown_event():
         coordinator.close()
         logger.info("✅ Coordination Agent closed")
     logger.info("👋 Backend shutdown complete")
+
+
+# Include authentication routes
+app.include_router(auth_router)
 
 
 @app.post("/api/v1/query")
