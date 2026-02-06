@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import GovernmentAnimation from './GovernmentAnimation'
 import '../styles/auth.css'
 
 const GOOGLE_CLIENT_ID = '69812575473-3aq9ms8fprokd29nku17h63gc5qatvue.apps.googleusercontent.com'
 
-const Login = ({ onNavigate }) => {
+const Login = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -117,8 +119,7 @@ const Login = ({ onNavigate }) => {
       setSuccess('Login successful! Redirecting...')
       
       setTimeout(() => {
-        window.location.href = '/'
-        window.location.reload() // Refresh to update auth state
+        navigate('/dashboard')
       }, 1500)
 
     } catch (err) {
@@ -274,14 +275,14 @@ const Login = ({ onNavigate }) => {
           {/* Register Link */}
           <p className="auth-footer-text">
             Don't have an account?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/register'); }}>
               Sign up
             </a>
           </p>
 
           {/* Back to Home */}
           <p className="auth-back-link">
-            <a href="/">← Back to Home</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }}>← Back to Home</a>
           </p>
         </div>
       </motion.div>

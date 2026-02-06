@@ -6,6 +6,8 @@ import PageLoader from './components/PageLoader'
 import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 import TestPage from './pages/TestPage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import { WaterPage, FirePage, EngineeringPage, HealthPage, FinancePage, SanitationPage } from './pages/AgentPages'
 
 function App() {
@@ -48,6 +50,10 @@ function App() {
             path="/test" 
             element={<TestPage />} 
           />
+
+          {/* Authentication Pages */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           {/* Agent Pages */}
           <Route path="/agent/water" element={<WaterPage />} />

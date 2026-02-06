@@ -1,34 +1,40 @@
-import React, { useState } from 'react'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
+import React, { useState, useEffect, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import { Brain, Network, Zap, Cpu, Server, Database } from 'lucide-react'
+import { Brain, Network, Zap } from 'lucide-react'
 
 const CoordinationBrain = ({ reducedMotion }) => {
   const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true })
-  const [activeNode, setActiveNode] = useState(null)
-  const [hoveredNode, setHoveredNode] = useState(null)
 
-  // Node positions and data
-  const nodes = [
-    { id: 'brain', x: 50, y: 35, icon: Brain, label: 'AI Core', color: '#3b82f6', size: 80 },
-    { id: 'cpu1', x: 20, y: 15, icon: Cpu, label: 'Processor A', color: '#14b8a6', size: 60 },
-    { id: 'cpu2', x: 80, y: 15, icon: Server, label: 'Processor B', color: '#14b8a6', size: 60 },
-    { id: 'db1', x: 15, y: 60, icon: Database, label: 'Data Store', color: '#f59e0b', size: 60 },
-    { id: 'net1', x: 50, y: 75, icon: Network, label: 'Network', color: '#8b5cf6', size: 60 },
-    { id: 'db2', x: 85, y: 60, icon: Zap, label: 'Cache', color: '#f59e0b', size: 60 },
-  ]
+  // Generate random particles with 3D positions
+  const particles = useMemo(() => {
+    return Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      z: Math.random() * 100,
+      size: Math.random() * 4 + 2,
+      duration: Math.random() * 10 + 5,
+      delay: Math.random() * 5,
+      color: ['#3b82f6', '#14b8a6', '#f59e0b', '#8b5cf6'][Math.floor(Math.random() * 4)]
+    }))
+  }, [])
 
-  const connections = [
-    { from: 'brain', to: 'cpu1' },
-    { from: 'brain', to: 'cpu2' },
-    { from: 'brain', to: 'db1' },
-    { from: 'brain', to: 'net1' },
-    { from: 'brain', to: 'db2' },
-    { from: 'cpu1', to: 'db1' },
-    { from: 'cpu2', to: 'db2' },
-    { from: 'db1', to: 'net1' },
-    { from: 'net1', to: 'db2' },
-  ]
+  // Generate orbital paths
+  const orbitPaths = useMemo(() => {
+    return Array.from({ length: 5 }, (_, i) => ({
+      id: i,
+      radius: 30 + i * 15,
+      duration: 15 + i * 3,
+      offset: (i * 360) / 5,
+      particles: Array.from({ length: 3 + i }, (_, j) => ({
+        id: `${i}-${j}`,
+        angle: (j * 360) / (3 + i),
+        size: Math.random() * 6 + 3,
+        color: ['#3b82f6', '#14b8a6', '#f59e0b'][i % 3]
+      }))
+    }))
+  }, [])
 
   return (
     <section ref={ref} className="relative py-32 px-6 bg-gradient-to-br from-neutral-lightBg to-neutral-offWhite overflow-hidden">
@@ -40,7 +46,7 @@ const CoordinationBrain = ({ reducedMotion }) => {
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid md:grid-cols-2 gap-16 items-center">
-          {/* Left: Interactive Neural Network */}
+          {/* Left: Autonomous 3D Particle Universe */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -48,76 +54,268 @@ const CoordinationBrain = ({ reducedMotion }) => {
             className="relative"
           >
             <div className="relative w-full aspect-square max-w-lg mx-auto">
-              {/* Connection Lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                {connections.map((conn, i) => {
-                  const fromNode = nodes.find(n => n.id === conn.from)
-                  const toNode = nodes.find(n => n.id === conn.to)
-                  const isActive = activeNode === conn.from || activeNode === conn.to
-                  const isHovered = hoveredNode === conn.from || hoveredNode === conn.to
-                  
-                  return (
-                    <motion.line
-                      key={`${conn.from}-${conn.to}`}
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={inView ? { 
-                        pathLength: 1, 
-                        opacity: isActive ? 0.8 : isHovered ? 0.5 : 0.2 
-                      } : {}}
-                      transition={{ 
-                        pathLength: { duration: 1, delay: i * 0.1 },
-                        opacity: { duration: 0.3 }
+              {/* 3D Perspective Container */}
+              <div 
+                className="absolute inset-0 overflow-hidden rounded-2xl"
+                style={{ 
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+                {/* Central Pulsing Core */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                  <motion.div
+                    className="relative w-32 h-32"
+                    animate={!reducedMotion ? {
+                      rotate: [0, 360],
+                      scale: [1, 1.1, 1]
+                    } : {}}
+                    transition={{
+                      rotate: { duration: 20, repeat: Infinity, ease: 'linear' },
+                      scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+                    }}
+                  >
+                    {/* Core glow layers */}
+                    {[...Array(3)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: `radial-gradient(circle, rgba(59, 130, 246, ${0.4 - i * 0.1}) 0%, transparent 70%)`,
+                          filter: 'blur(15px)'
+                        }}
+                        animate={!reducedMotion ? {
+                          scale: [1, 1.5 + i * 0.3, 1],
+                          opacity: [0.6, 0.2, 0.6]
+                        } : {}}
+                        transition={{
+                          duration: 3 + i,
+                          repeat: Infinity,
+                          delay: i * 0.5
+                        }}
+                      />
+                    ))}
+                    
+                    {/* Core icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-gov-blue to-blue-600 shadow-2xl flex items-center justify-center"
+                        animate={!reducedMotion ? {
+                          boxShadow: [
+                            '0 0 20px rgba(59, 130, 246, 0.5)',
+                            '0 0 40px rgba(59, 130, 246, 0.8)',
+                            '0 0 20px rgba(59, 130, 246, 0.5)'
+                          ]
+                        } : {}}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <Brain className="text-white" size={40} />
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Orbital Rings with Particles */}
+                {orbitPaths.map((orbit) => (
+                  <div key={orbit.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    {/* Orbit ring */}
+                    <motion.div
+                      className="absolute rounded-full border border-gov-blue/10"
+                      style={{
+                        width: `${orbit.radius * 2}%`,
+                        height: `${orbit.radius * 2}%`,
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
                       }}
-                      x1={`${fromNode.x}%`}
-                      y1={`${fromNode.y}%`}
-                      x2={`${toNode.x}%`}
-                      y2={`${toNode.y}%`}
-                      stroke={isActive ? fromNode.color : '#3b82f6'}
-                      strokeWidth={isActive ? 3 : 2}
-                      strokeDasharray={isActive ? '0' : '4 4'}
+                      animate={!reducedMotion ? {
+                        rotate: [orbit.offset, orbit.offset + 360],
+                        opacity: [0.2, 0.4, 0.2]
+                      } : {}}
+                      transition={{
+                        rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' },
+                        opacity: { duration: 3, repeat: Infinity }
+                      }}
                     />
-                  )
-                })}
-              </svg>
 
-              {/* Interactive Nodes */}
-              {nodes.map((node, i) => (
-                <InteractiveNode
-                  key={node.id}
-                  node={node}
-                  index={i}
-                  inView={inView}
-                  reducedMotion={reducedMotion}
-                  isActive={activeNode === node.id}
-                  isHovered={hoveredNode === node.id}
-                  onActivate={() => setActiveNode(activeNode === node.id ? null : node.id)}
-                  onHover={() => setHoveredNode(node.id)}
-                  onLeave={() => setHoveredNode(null)}
-                />
-              ))}
+                    {/* Orbital particles */}
+                    {orbit.particles.map((particle) => (
+                      <motion.div
+                        key={particle.id}
+                        className="absolute rounded-full"
+                        style={{
+                          width: `${particle.size}px`,
+                          height: `${particle.size}px`,
+                          backgroundColor: particle.color,
+                          boxShadow: `0 0 ${particle.size * 2}px ${particle.color}`,
+                          left: '50%',
+                          top: '50%',
+                        }}
+                        animate={!reducedMotion ? {
+                          rotate: [particle.angle, particle.angle + 360],
+                          x: [
+                            Math.cos((particle.angle * Math.PI) / 180) * orbit.radius * 4,
+                            Math.cos(((particle.angle + 360) * Math.PI) / 180) * orbit.radius * 4
+                          ],
+                          y: [
+                            Math.sin((particle.angle * Math.PI) / 180) * orbit.radius * 4,
+                            Math.sin(((particle.angle + 360) * Math.PI) / 180) * orbit.radius * 4
+                          ],
+                          scale: [1, 1.3, 1],
+                        } : {}}
+                        transition={{
+                          rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' },
+                          x: { duration: orbit.duration, repeat: Infinity, ease: 'linear' },
+                          y: { duration: orbit.duration, repeat: Infinity, ease: 'linear' },
+                          scale: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+                        }}
+                      />
+                    ))}
+                  </div>
+                ))}
 
-              {/* Floating Data Particles */}
-              {!reducedMotion && activeNode && (
-                <DataParticles activeNode={nodes.find(n => n.id === activeNode)} />
-              )}
+                {/* 3D Floating Particles */}
+                {!reducedMotion && particles.map((particle) => (
+                  <motion.div
+                    key={particle.id}
+                    className="absolute rounded-full pointer-events-none"
+                    style={{
+                      width: `${particle.size}px`,
+                      height: `${particle.size}px`,
+                      backgroundColor: particle.color,
+                      filter: `blur(${particle.size * 0.3}px)`,
+                      left: `${particle.x}%`,
+                      top: `${particle.y}%`,
+                    }}
+                    initial={{
+                      opacity: 0,
+                      scale: 0,
+                      z: particle.z
+                    }}
+                    animate={inView ? {
+                      opacity: [0, 0.8, 0],
+                      scale: [0, 1, 0],
+                      x: [0, (Math.random() - 0.5) * 300],
+                      y: [0, (Math.random() - 0.5) * 300],
+                      z: [particle.z, particle.z + 50, particle.z],
+                      rotateX: [0, 360],
+                      rotateY: [0, 360],
+                    } : {}}
+                    transition={{
+                      duration: particle.duration,
+                      delay: particle.delay,
+                      repeat: Infinity,
+                      ease: 'easeInOut'
+                    }}
+                  />
+                ))}
+
+                {/* Data Stream Lines */}
+                {!reducedMotion && (
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+                    {[...Array(8)].map((_, i) => {
+                      const angle = (i * 360) / 8
+                      const x1 = 50 + Math.cos((angle * Math.PI) / 180) * 10
+                      const y1 = 50 + Math.sin((angle * Math.PI) / 180) * 10
+                      const x2 = 50 + Math.cos((angle * Math.PI) / 180) * 45
+                      const y2 = 50 + Math.sin((angle * Math.PI) / 180) * 45
+                      
+                      return (
+                        <motion.line
+                          key={i}
+                          x1={`${x1}%`}
+                          y1={`${y1}%`}
+                          x2={`${x2}%`}
+                          y2={`${y2}%`}
+                          stroke="url(#gradient)"
+                          strokeWidth="2"
+                          initial={{ pathLength: 0, opacity: 0 }}
+                          animate={{
+                            pathLength: [0, 1, 0],
+                            opacity: [0, 0.6, 0]
+                          }}
+                          transition={{
+                            duration: 3,
+                            delay: i * 0.3,
+                            repeat: Infinity,
+                            ease: 'easeInOut'
+                          }}
+                        />
+                      )
+                    })}
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                        <stop offset="50%" stopColor="#3b82f6" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                )}
+
+                {/* Energy Bursts */}
+                {!reducedMotion && [...Array(4)].map((_, i) => (
+                  <motion.div
+                    key={`burst-${i}`}
+                    className="absolute top-1/2 left-1/2"
+                    style={{
+                      width: '200px',
+                      height: '200px',
+                      marginLeft: '-100px',
+                      marginTop: '-100px',
+                    }}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{
+                      opacity: [0, 0.3, 0],
+                      scale: [0, 2, 0],
+                      rotate: [0, 180]
+                    }}
+                    transition={{
+                      duration: 4,
+                      delay: i * 1,
+                      repeat: Infinity,
+                      ease: 'easeOut'
+                    }}
+                  >
+                    <div 
+                      className="w-full h-full rounded-full border-2"
+                      style={{
+                        borderColor: ['#3b82f6', '#14b8a6', '#f59e0b', '#8b5cf6'][i],
+                        boxShadow: `0 0 50px ${['#3b82f6', '#14b8a6', '#f59e0b', '#8b5cf6'][i]}40`
+                      }}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Status Text */}
+              <motion.div
+                className="absolute -bottom-12 left-0 right-0 text-center"
+                initial={{ opacity: 0 }}
+                animate={inView ? { opacity: 1 } : {}}
+                transition={{ delay: 1 }}
+              >
+                <div className="flex items-center justify-center gap-2 text-xs text-gov-gray/60">
+                  <motion.div
+                    className="w-1.5 h-1.5 rounded-full bg-neon-emerald"
+                    animate={!reducedMotion ? {
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5]
+                    } : {}}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <span className="font-mono">AUTONOMOUS COORDINATION ACTIVE</span>
+                  <motion.div
+                    className="w-1.5 h-1.5 rounded-full bg-neon-emerald"
+                    animate={!reducedMotion ? {
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5]
+                    } : {}}
+                    transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+                  />
+                </div>
+              </motion.div>
             </div>
-
-            {/* Interactive Instruction */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 1.5 }}
-              className="mt-6 text-center"
-            >
-              <p className="text-sm text-gov-gray/70 flex items-center justify-center gap-2">
-                <motion.span
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="inline-block w-2 h-2 rounded-full bg-gov-blue"
-                />
-                Drag nodes • Click to activate • Hover to explore
-              </p>
-            </motion.div>
           </motion.div>
 
           {/* Right: Content */}
@@ -164,157 +362,6 @@ const CoordinationBrain = ({ reducedMotion }) => {
         </div>
       </div>
     </section>
-  )
-}
-
-// Interactive Draggable Node Component
-const InteractiveNode = ({ 
-  node, 
-  index, 
-  inView, 
-  reducedMotion, 
-  isActive, 
-  isHovered,
-  onActivate, 
-  onHover, 
-  onLeave 
-}) => {
-  const Icon = node.icon
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  
-  // Transform for magnetic snap effect
-  const magneticX = useTransform(x, [-100, 100], [-15, 15])
-  const magneticY = useTransform(y, [-100, 100], [-15, 15])
-
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      animate={inView ? { 
-        scale: isActive ? 1.15 : isHovered ? 1.1 : 1, 
-        opacity: 1 
-      } : {}}
-      transition={{ 
-        duration: 0.5, 
-        delay: 0.3 + index * 0.1,
-        scale: { type: 'spring', stiffness: 300, damping: 20 }
-      }}
-      drag
-      dragElastic={0.2}
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
-      whileHover={{ scale: 1.1, cursor: 'grab' }}
-      whileTap={{ scale: 0.95, cursor: 'grabbing' }}
-      onClick={onActivate}
-      onMouseEnter={onHover}
-      onMouseLeave={onLeave}
-      className="absolute z-10"
-      style={{
-        top: `${node.y}%`,
-        left: `${node.x}%`,
-        width: `${node.size}px`,
-        height: `${node.size}px`,
-        x: reducedMotion ? 0 : magneticX,
-        y: reducedMotion ? 0 : magneticY,
-      }}
-    >
-      <div className="relative w-full h-full flex items-center justify-center">
-        {/* Glow effect */}
-        {(isActive || isHovered) && !reducedMotion && (
-          <motion.div
-            className="absolute inset-0 rounded-full blur-xl"
-            style={{ backgroundColor: `${node.color}40` }}
-            animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-        )}
-
-        {/* Main node */}
-        <motion.div
-          className="relative w-full h-full rounded-full professional-card shadow-professional flex items-center justify-center overflow-hidden"
-          style={{
-            background: isActive 
-              ? `linear-gradient(135deg, ${node.color}20, ${node.color}10)`
-              : 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))',
-            borderColor: isActive ? node.color : 'rgba(59, 130, 246, 0.2)',
-            borderWidth: '2px',
-            borderStyle: 'solid',
-            boxShadow: isActive 
-              ? `0 8px 32px ${node.color}40, 0 0 20px ${node.color}30`
-              : '0 4px 20px rgba(0,0,0,0.1)',
-          }}
-        >
-          <Icon 
-            size={node.size * 0.4} 
-            style={{ color: isActive ? node.color : '#3b82f6' }}
-            className="relative z-10"
-          />
-
-          {/* Ripple effect on active */}
-          {isActive && !reducedMotion && (
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{ border: `2px solid ${node.color}` }}
-              initial={{ scale: 1, opacity: 1 }}
-              animate={{ scale: 1.5, opacity: 0 }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          )}
-        </motion.div>
-
-        {/* Label */}
-        <motion.div
-          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isHovered || isActive ? 1 : 0.7 }}
-          transition={{ duration: 0.2 }}
-        >
-          <span 
-            className="text-xs font-semibold px-2 py-1 rounded-full"
-            style={{ 
-              background: isActive ? `${node.color}20` : 'rgba(255,255,255,0.9)',
-              color: isActive ? node.color : '#1e3a5f',
-              border: `1px solid ${isActive ? node.color : 'transparent'}`,
-            }}
-          >
-            {node.label}
-          </span>
-        </motion.div>
-      </div>
-    </motion.div>
-  )
-}
-
-// Animated Data Particles
-const DataParticles = ({ activeNode }) => {
-  return (
-    <>
-      {[...Array(8)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
-          style={{
-            backgroundColor: activeNode.color,
-            left: `${activeNode.x}%`,
-            top: `${activeNode.y}%`,
-            filter: `drop-shadow(0 0 4px ${activeNode.color})`,
-          }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{
-            x: [0, (Math.random() - 0.5) * 200],
-            y: [0, (Math.random() - 0.5) * 200],
-            scale: [0, 1, 0],
-            opacity: [0, 1, 0],
-          }}
-          transition={{
-            duration: 2,
-            delay: i * 0.2,
-            repeat: Infinity,
-            ease: 'easeOut',
-          }}
-        />
-      ))}
-    </>
   )
 }
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import GovernmentAnimation from './GovernmentAnimation'
 import '../styles/auth.css'
 
 const GOOGLE_CLIENT_ID = '69812575473-3aq9ms8fprokd29nku17h63gc5qatvue.apps.googleusercontent.com'
 
-const Register = ({ onNavigate }) => {
+const Register = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -66,7 +68,7 @@ const Register = ({ onNavigate }) => {
       setSuccess('Registration successful! Redirecting to login...')
       
       setTimeout(() => {
-        window.location.hash = '#login'
+        navigate('/login')
       }, 1500)
 
     } catch (err) {
@@ -172,7 +174,7 @@ const Register = ({ onNavigate }) => {
       setSuccess('Registration successful! Redirecting to login...')
       
       setTimeout(() => {
-        window.location.hash = '#login'
+        navigate('/login')
       }, 1500)
 
     } catch (err) {
@@ -421,14 +423,14 @@ const Register = ({ onNavigate }) => {
           {/* Login Link */}
           <p className="auth-footer-text">
             Already have an account?{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('login'); }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>
               Sign in
             </a>
           </p>
 
           {/* Back to Home */}
           <p className="auth-back-link">
-            <a href="/">← Back to Home</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }}>← Back to Home</a>
           </p>
         </div>
       </motion.div>
