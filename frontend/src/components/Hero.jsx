@@ -8,6 +8,13 @@ const Hero = ({ reducedMotion }) => {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true })
   const navigate = useNavigate()
   const [stats, setStats] = useState({ agents: 0, lines: 0, coverage: 0 })
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('city_governance_token')
+    setIsLoggedIn(!!token)
+  }, [])
 
   useEffect(() => {
     if (inView && !reducedMotion) {
@@ -137,29 +144,33 @@ const Hero = ({ reducedMotion }) => {
             <div className={`absolute inset-0 bg-gradient-to-r from-gov-blue to-accent-gold opacity-0 ${reducedMotion ? '' : 'group-hover:opacity-15'} transition-opacity duration-500`}></div>
           </button>
 
-          {/* Login Button */}
-          <button 
-            onClick={() => navigate('/login')}
-            className="group relative px-8 py-5 bg-white text-gov-navy rounded-lg text-lg font-semibold overflow-hidden hover:shadow-elevated transition-all duration-500 border-2 border-gov-blue/30 hover:border-gov-blue"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              <LogIn size={20} />
-              Login
-            </span>
-            <div className={`absolute inset-0 bg-gov-blue/10 opacity-0 ${reducedMotion ? '' : 'group-hover:opacity-100'} transition-opacity duration-500`}></div>
-          </button>
+          {/* Login Button - Only show if not logged in */}
+          {!isLoggedIn && (
+            <button 
+              onClick={() => navigate('/login')}
+              className="group relative px-8 py-5 bg-white text-gov-navy rounded-lg text-lg font-semibold overflow-hidden hover:shadow-elevated transition-all duration-500 border-2 border-gov-blue/30 hover:border-gov-blue"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <LogIn size={20} />
+                Login
+              </span>
+              <div className={`absolute inset-0 bg-gov-blue/10 opacity-0 ${reducedMotion ? '' : 'group-hover:opacity-100'} transition-opacity duration-500`}></div>
+            </button>
+          )}
 
-          {/* Register Button */}
-          <button 
-            onClick={() => navigate('/register')}
-            className="group relative px-8 py-5 bg-gradient-to-r from-gov-blue to-accent-gold text-white rounded-lg text-lg font-semibold overflow-hidden hover:shadow-gold-glow transition-all duration-500"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              <UserPlus size={20} />
-              Sign Up
-            </span>
-            <div className={`absolute inset-0 bg-white/20 opacity-0 ${reducedMotion ? '' : 'group-hover:opacity-100'} transition-opacity duration-500`}></div>
-          </button>
+          {/* Register Button - Only show if not logged in */}
+          {!isLoggedIn && (
+            <button 
+              onClick={() => navigate('/register')}
+              className="group relative px-8 py-5 bg-gradient-to-r from-gov-blue to-accent-gold text-white rounded-lg text-lg font-semibold overflow-hidden hover:shadow-gold-glow transition-all duration-500"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <UserPlus size={20} />
+                Sign Up
+              </span>
+              <div className={`absolute inset-0 bg-white/20 opacity-0 ${reducedMotion ? '' : 'group-hover:opacity-100'} transition-opacity duration-500`}></div>
+            </button>
+          )}
         </motion.div>
       </div>
     </section>

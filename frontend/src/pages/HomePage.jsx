@@ -1,6 +1,7 @@
-import React, { Suspense, lazy } from 'react'
-import { Link } from 'react-router-dom'
+import React, { Suspense, lazy, useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import PageLoader from '../components/PageLoader'
+import { User, LogOut } from 'lucide-react'
 
 // Lazy load all components
 const NeuralBackground = lazy(() => import('../components/NeuralBackground'))
@@ -14,23 +15,65 @@ const Footer = lazy(() => import('../components/Footer'))
 const AccessibilityControls = lazy(() => import('../components/AccessibilityControls'))
 
 const HomePage = ({ reducedMotion, highContrast, setReducedMotion, setHighContrast }) => {
+  const [user, setUser] = useState(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Check if user is logged in
+    const userStr = localStorage.getItem('city_governance_user')
+    if (userStr) {
+      try {
+        setUser(JSON.parse(userStr))
+      } catch (err) {
+        console.error('Error parsing user data:', err)
+      }
+    }
+  }, [])
+
+  // Extract username from email (before @)
+  const getDisplayName = () => {
+    if (!user) return ''
+    
+    // If user has a name property and it's not an email, use it
+    if (user.name && !user.name.includes('@')) {
+      return user.name
+    }
+    
+    // Otherwise, extract from email (part before @)
+    const email = user.email || user.name || ''
+    const username = email.split('@')[0]
+    
+    // Capitalize first letter
+    return username.charAt(0).toUpperCase() + username.slice(1)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('city_governance_token')
+    localStorage.removeItem('city_governance_refresh_token')
+    localStorage.removeItem('city_governance_user')
+    setUser(null)
+    navigate('/')
+    window.location.reload()
+  }
+
   return (
     <div className={`min-h-screen ${highContrast ? 'contrast-150' : ''}`}>
-      {/* Navigation Toggle */}
-      <div className="fixed top-4 right-4 z-50 flex gap-3">
-        <Link
-          to="/dashboard"
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
-        >
-          📊 Dashboard
-        </Link>
-        <Link
-          to="/test"
-          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
-        >
-          🧪 API Test
-        </Link>
-      </div>
+      {/* User Display - Positioned below accessibility controls */}
+      {user && (
+        <div className="fixed top-20 right-4 z-50">
+          <div className="px-6 py-3 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gov-blue/20 flex items-center gap-3">
+            <User size={20} className="text-gov-blue" />
+            <span className="font-semibold text-gov-navy">{getDisplayName()}</span>
+            <button
+              onClick={handleLogout}
+              className="ml-2 p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600 flex items-center gap-1"
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Background */}
       <Suspense fallback={null}>
