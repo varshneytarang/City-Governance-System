@@ -1,15 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import WaterAgentPage from './WaterAgentPage'
-import { Flame, Wrench, Heart, DollarSign, Trash2 } from 'lucide-react'
+import AgentChatBot from './AgentChatBot'
+import { Flame, Wrench, Heart, DollarSign, Trash2, Home, MessageSquare } from 'lucide-react'
 
 // Fire Agent Page Component
 export const FireAgentPage = () => {
-  const FireAgent = { ...WaterAgentPage }
-  // Customize for Fire department
   return (
     <div className="min-h-screen bg-white">
       <WaterAgentPageTemplate 
+        agentType="fire"
+        agentName="Fire & Emergency"
         icon={Flame}
         title="Fire & Emergency"
         subtitle="Response & Prevention Services"
@@ -44,6 +46,8 @@ export const EngineeringAgentPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <WaterAgentPageTemplate 
+        agentType="engineering"
+        agentName="Engineering & Development"
         icon={Wrench}
         title="Engineering & Development"
         subtitle="Urban Infrastructure Management"
@@ -78,6 +82,8 @@ export const HealthAgentPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <WaterAgentPageTemplate 
+        agentType="health"
+        agentName="Health & Wellness"
         icon={Heart}
         title="Health & Wellness"
         subtitle="Public Health Services"
@@ -112,6 +118,8 @@ export const FinanceAgentPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <WaterAgentPageTemplate 
+        agentType="finance"
+        agentName="Finance & Budget"
         icon={DollarSign}
         title="Finance & Budget"
         subtitle="Resource Allocation & Management"
@@ -146,6 +154,8 @@ export const SanitationAgentPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <WaterAgentPageTemplate 
+        agentType="sanitation"
+        agentName="Sanitation & Waste Management"
         icon={Trash2}
         title="Sanitation & Waste"
         subtitle="Waste Management Services"
@@ -176,11 +186,54 @@ export const SanitationAgentPage = () => {
 }
 
 // Reusable Template Component
-const WaterAgentPageTemplate = ({ icon: Icon, title, subtitle, color, accentColor, stats, zones, recentActions }) => {
+const WaterAgentPageTemplate = ({ 
+  agentType, 
+  agentName, 
+  icon: Icon, 
+  title, 
+  subtitle, 
+  color, 
+  accentColor, 
+  stats, 
+  zones, 
+  recentActions 
+}) => {
   const navigate = useNavigate()
+  const [showChat, setShowChat] = useState(true)
+  const [isChatMinimized, setIsChatMinimized] = useState(false)
   
   return (
     <>
+      {/* Chatbot Sidebar */}
+      {showChat && (
+        <div className="fixed left-0 top-0 bottom-0 z-40">
+          <AgentChatBot
+            agentType={agentType}
+            agentName={agentName}
+            agentColor={color}
+            onClose={() => setShowChat(false)}
+            isMinimized={isChatMinimized}
+            onToggleMinimize={() => setIsChatMinimized(!isChatMinimized)}
+          />
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 ${showChat && !isChatMinimized ? 'ml-[320px]' : 'ml-0'}`}>
+        {/* Floating Chat Toggle Button */}
+        {!showChat && (
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            onClick={() => setShowChat(true)}
+            className="fixed left-4 bottom-4 z-50 w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+            style={{ backgroundColor: color }}
+            title="Open Chat"
+          >
+            <MessageSquare size={24} />
+          </motion.button>
+        )}
+
       <header className="border-b border-gray-200 bg-white sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
@@ -190,9 +243,7 @@ const WaterAgentPageTemplate = ({ icon: Icon, title, subtitle, color, accentColo
                 className="p-2 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer"
                 style={{ background: `${color}10`, color: color }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
+                <Home size={20} />
                 <span className="text-sm font-medium">Home</span>
               </button>
               <div className="h-8 w-px bg-gray-200" />
@@ -318,8 +369,7 @@ const WaterAgentPageTemplate = ({ icon: Icon, title, subtitle, color, accentColo
           </div>
         </div>
       </div>
+      </div>
     </>
   )
 }
-
-export default WaterAgentPageTemplate
