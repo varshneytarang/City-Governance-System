@@ -17,7 +17,7 @@ const useChatbot = (agentType) => {
   
   const pollingIntervalRef = useRef(null)
   const analyticsRef = useRef(null)
-  const API_BASE_URL = 'http://localhost:8000'
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1'
   const MAX_RETRIES = 3
 
   // Initialize analytics
@@ -298,7 +298,7 @@ const useChatbot = (agentType) => {
       } else {
         addMessage({
           type: 'system',
-          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running on http://localhost:8000`,
+          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running at ${API_BASE_URL}`,,
           status: 'error',
           canRetry: true,
           originalMessage: message
