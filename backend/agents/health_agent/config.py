@@ -19,11 +19,11 @@ class HealthSettings(BaseSettings):
     """
 
     # Database (defaults from global settings)
-    DB_HOST: str = global_config.global_settings.DB_HOST
+    DB_HOST: Optional[str] = global_config.global_settings.DB_HOST
     DB_PORT: int = global_config.global_settings.DB_PORT
-    DB_NAME: str = global_config.global_settings.DB_NAME
-    DB_USER: str = global_config.global_settings.DB_USER
-    DB_PASSWORD: str = global_config.global_settings.DB_PASSWORD
+    DB_NAME: Optional[str] = global_config.global_settings.DB_NAME
+    DB_USER: Optional[str] = global_config.global_settings.DB_USER
+    DB_PASSWORD: Optional[str] = global_config.global_settings.DB_PASSWORD
 
     # LLM (defaults from global LLM settings)
     LLM_PROVIDER: str = global_config.global_llm_settings.LLM_PROVIDER

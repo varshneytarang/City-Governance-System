@@ -10,11 +10,11 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Database
-    DB_HOST: str = "localhost"
+    DB_HOST: Optional[str] = None
     DB_PORT: int = 5432
-    DB_NAME: str = "departments"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
+    DB_NAME: Optional[str] = None
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
     
     # LLM
     LLM_PROVIDER: str = "openai"  # openai, groq, or local

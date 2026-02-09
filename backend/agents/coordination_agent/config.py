@@ -56,17 +56,17 @@ class CoordinationConfig:
     
     # Database
     if _has_global_config:
-        DB_HOST: str = global_config.global_settings.DB_HOST
+        DB_HOST: Optional[str] = global_config.global_settings.DB_HOST
         DB_PORT: int = global_config.global_settings.DB_PORT
-        DB_NAME: str = global_config.global_settings.DB_NAME
-        DB_USER: str = global_config.global_settings.DB_USER
-        DB_PASSWORD: str = global_config.global_settings.DB_PASSWORD
+        DB_NAME: Optional[str] = global_config.global_settings.DB_NAME
+        DB_USER: Optional[str] = global_config.global_settings.DB_USER
+        DB_PASSWORD: Optional[str] = global_config.global_settings.DB_PASSWORD
     else:
-        DB_HOST: str = os.getenv("DB_HOST")  # No default - must be set
+        DB_HOST: Optional[str] = os.getenv("DB_HOST")  # No default - must be set
         DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
-        DB_NAME: str = os.getenv("DB_NAME")
-        DB_USER: str = os.getenv("DB_USER")
-        DB_PASSWORD: str = os.getenv("DB_PASSWORD")
+        DB_NAME: Optional[str] = os.getenv("DB_NAME")
+        DB_USER: Optional[str] = os.getenv("DB_USER")
+        DB_PASSWORD: Optional[str] = os.getenv("DB_PASSWORD")
     
     # Timeouts
     LLM_TIMEOUT: int = 30  # seconds
