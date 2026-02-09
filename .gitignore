@@ -56,3 +56,12 @@ ENV/
 # Temporary files
 *.tmp
 .temp/
+
+# Docker
+*.dockerignore
+docker-compose.override.yml
+.docker/
+
+# Local development
+.env.development
+.env.test

@@ -10,8 +10,18 @@ Usage:
 """
 
 import os
+from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings
+
+# Determine .env file location (check backend dir, then parent dir)
+_backend_dir = Path(__file__).parent
+_env_path = _backend_dir / ".env"
+if not _env_path.exists():
+    # Try parent directory (project root)
+    _env_path = _backend_dir.parent / ".env"
+if not _env_path.exists():
+    _env_path = None  # Let Pydantic handle it
 
 
 class GlobalSettings(BaseSettings):
@@ -34,7 +44,7 @@ class GlobalSettings(BaseSettings):
     CONFIDENCE_THRESHOLD: float = 0.7
     
     class Config:
-        env_file = ".env"
+        env_file = str(_env_path) if _env_path else ".env"
         case_sensitive = True
         extra = "ignore"  # Ignore extra fields from .env
 
@@ -59,7 +69,7 @@ class GlobalLLMSettings(BaseSettings):
     LLM_TEMPERATURE: float = 0.3
     
     class Config:
-        env_file = ".env"
+        env_file = str(_env_path) if _env_path else ".env"
         case_sensitive = True
         extra = "ignore"  # Ignore extra fields from .env
 
