@@ -40,12 +40,12 @@ class GlobalSettings(BaseSettings):
     agent behavior that can be overridden by individual agents.
     """
     
-    # Database Configuration
-    DB_HOST: str = None  # Must be set via environment variable
+    # Database Configuration (optional - DATABASE_URL takes priority)
+    DB_HOST: Optional[str] = None
     DB_PORT: int = 5432
-    DB_NAME: str = "city_mas"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "passwordpassword"
+    DB_NAME: Optional[str] = "railway"
+    DB_USER: Optional[str] = "postgres"
+    DB_PASSWORD: Optional[str] = None
     
     # Agent Behavior Defaults
     MAX_PLANNING_ATTEMPTS: int = 3
