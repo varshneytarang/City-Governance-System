@@ -41,7 +41,7 @@ class GlobalSettings(BaseSettings):
     """
     
     # Database Configuration
-    DB_HOST: str = "localhost"
+    DB_HOST: str = None  # Must be set via environment variable
     DB_PORT: int = 5432
     DB_NAME: str = "city_mas"
     DB_USER: str = "postgres"

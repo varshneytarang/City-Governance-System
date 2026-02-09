@@ -25,12 +25,13 @@ class HealthDatabaseConnection:
 
     def connect(self):
         try:
-            # Prefer DSN if provided (HEALTH_DATABASE_URL or DATABASE_URL)
-            dsn = os.getenv("HEALTH_DATABASE_URL") or os.getenv("DATABASE_URL")
-            if dsn:
-                self.conn = psycopg2.connect(dsn)
-                logger.info(f"✓ Connected to health database via DSN")
+            # Prefer DATABASE_URL from Railway
+            database_url = os.getenv("DATABASE_URL") or os.getenv("HEALTH_DATABASE_URL")
+            if database_url:
+                self.conn = psycopg2.connect(database_url, sslmode="require")
+                logger.info(f"✓ Connected to health database via DATABASE_URL")
             else:
+                # Fallback to individual env vars (local development only)
                 self.conn = psycopg2.connect(
                     host=settings.DB_HOST,
                     port=settings.DB_PORT,

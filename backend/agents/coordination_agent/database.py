@@ -33,14 +33,21 @@ class CoordinationDatabase:
     
     def connect(self):
         """Establish database connection"""
+        import os
         try:
-            self.conn = psycopg2.connect(
-                host=CoordinationConfig.DB_HOST,
-                port=CoordinationConfig.DB_PORT,
-                dbname=CoordinationConfig.DB_NAME,
-                user=CoordinationConfig.DB_USER,
-                password=CoordinationConfig.DB_PASSWORD
-            )
+            # Use DATABASE_URL from Railway (mandatory)
+            database_url = os.getenv("DATABASE_URL")
+            if database_url:
+                self.conn = psycopg2.connect(database_url, sslmode="require")
+            else:
+                # Fallback to individual env vars (local development only)
+                self.conn = psycopg2.connect(
+                    host=os.getenv("DB_HOST"),
+                    port=int(os.getenv("DB_PORT", "5432")),
+                    dbname=os.getenv("DB_NAME"),
+                    user=os.getenv("DB_USER"),
+                    password=os.getenv("DB_PASSWORD")
+                )
             self.conn.autocommit = True
             logger.info("✓ Database connection established")
         except Exception as e:
