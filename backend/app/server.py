@@ -332,8 +332,8 @@ def get_agent_decision_result(agent_id: str, job_id: str) -> Any:
 
 
 @app.get("/api/v1/health")
-def health():
-	"""Health check endpoint"""
+def health_v1():
+	"""Health check endpoint (API v1)"""
 	global coordinator
 	
 	coordinator_status = "initialized" if coordinator else "not_initialized"
@@ -343,3 +343,9 @@ def health():
 		"coordinator": coordinator_status,
 		"version": "0.2"
 	}
+
+
+@app.get("/health")
+def health():
+	"""Health check endpoint (root)"""
+	return {"status": "ok"}

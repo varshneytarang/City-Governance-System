@@ -8,9 +8,9 @@ through the Coordination Agent to the appropriate department agent.
 import os
 import sys
 
-# Make sure we're in the project root
-project_root = os.path.dirname(os.path.abspath(__file__))
-os.chdir(project_root)
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, backend_dir)
 
 print("\n" + "=" * 80)
 print("🚀 STARTING CITY GOVERNANCE BACKEND")
@@ -82,11 +82,14 @@ print("\n" + "=" * 80)
 print("\n🌐 Starting server on http://localhost:8000")
 print("   Press CTRL+C to stop\n")
 
+# Import the FastAPI app to make it available for uvicorn
+from app.server import app
+
 # Start the server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "backend.app.server:app",
+        "main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
