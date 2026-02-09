@@ -301,6 +301,69 @@ class WaterDepartmentQueries:
         """
         result = self.db.execute_query(query, (location,))
         return result[0]['count'] > 0 if result else False
+    
+    # ========== ADDITIONAL WATER INFRASTRUCTURE QUERIES ==========
+    
+    def get_pipeline_inspections(self, pipeline_id: Optional[str] = None, days: int = 90) -> List[Dict]:
+        """Get pipeline inspection history"""
+        query = """
+            SELECT pi.inspection_id, pi.pipeline_id, pi.inspector, pi.inspection_date,
+                   pi.outcome, pi.notes, pi.findings,
+                   p.location, p.zone, p.pipeline_type, p.condition
+            FROM pipeline_inspections pi
+            JOIN pipelines p ON pi.pipeline_id = p.pipeline_id
+            WHERE pi.inspection_date > CURRENT_DATE - INTERVAL '%s days'
+        """
+        params = [days]
+        
+        if pipeline_id:
+            query += " AND pi.pipeline_id = %s"
+            params.append(pipeline_id)
+        
+        query += " ORDER BY pi.inspection_date DESC"
+        return self.db.execute_query(query, tuple(params))
+    
+    def get_water_readings(self, location: Optional[str] = None, hours: int = 24) -> List[Dict]:
+        """Get recent water network sensor readings"""
+        query = """
+            SELECT wr.reading_id, wr.pipeline_id, wr.location, wr.reading_time,
+                   wr.pressure_psi, wr.flow_rate, wr.temperature, wr.metadata,
+                   p.zone, p.pipeline_type
+            FROM water_readings wr
+            LEFT JOIN pipelines p ON wr.pipeline_id = p.pipeline_id
+            WHERE wr.reading_time > CURRENT_TIMESTAMP - INTERVAL '%s hours'
+        """
+        params = [hours]
+        
+        if location:
+            query += " AND wr.location = %s"
+            params.append(location)
+        
+        query += " ORDER BY wr.reading_time DESC LIMIT 100"
+        return self.db.execute_query(query, tuple(params))
+    
+    def get_service_outages(self, location: Optional[str] = None, status: Optional[str] = None) -> List[Dict]:
+        """Get water service outages and disruptions"""
+        query = """
+            SELECT outage_id, location, zone, reported_at, started_at, resolved_at,
+                   severity, cause, affected_customers, status, related_pipeline_id
+            FROM service_outages
+            WHERE 1=1
+        """
+        params = []
+        
+        if location:
+            query += " AND location = %s"
+            params.append(location)
+        
+        if status:
+            query += " AND status = %s"
+            params.append(status)
+        else:
+            query += " AND status NOT IN ('closed', 'resolved')"
+        
+        query += " ORDER BY reported_at DESC"
+        return self.db.execute_query(query, tuple(params))
 
 
 def get_db() -> DatabaseConnection:

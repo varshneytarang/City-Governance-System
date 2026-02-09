@@ -65,8 +65,11 @@ class FinanceDepartmentAgent:
             
             # Check if we should escalate based on coordination
             if state.get("escalate"):
-                state["completed_at"] = datetime.now()
-                state["execution_time_ms"] = int((state["completed_at"] - start_time).total_seconds() * 1000)
+                end_time = datetime.now()
+                state["completed_at"] = end_time.isoformat()
+                state["execution_time_ms"] = int((end_time - start_time).total_seconds() * 1000)
+                if "started_at" in state and isinstance(state["started_at"], datetime):
+                    state["started_at"] = state["started_at"].isoformat()
                 return state.get("response", {
                     "decision": "escalate",
                     "reason": state.get("escalation_reason", "Coordination required human intervention"),
@@ -78,8 +81,11 @@ class FinanceDepartmentAgent:
             state = policy_validator_node(state)
             state = output_generator_node(state)
 
-            state["completed_at"] = datetime.now()
-            state["execution_time_ms"] = int((state["completed_at"] - start_time).total_seconds() * 1000)
+            end_time = datetime.now()
+            state["completed_at"] = end_time.isoformat()
+            state["execution_time_ms"] = int((end_time - start_time).total_seconds() * 1000)
+            if "started_at" in state and isinstance(state["started_at"], datetime):
+                state["started_at"] = state["started_at"].isoformat()
 
             return state.get("response", {})
 

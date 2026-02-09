@@ -12,7 +12,11 @@ class HealthAgentState(TypedDict, total=False):
     # Input and context
     input_event: Dict[str, Any]
     context: Dict[str, Any]
+    
+    # Intent classification
+    query_type: str  # "informational" or "action"
     intent: str
+    needs_planning: bool
     
     # Risk assessment
     risk_level: str
@@ -49,3 +53,7 @@ class HealthAgentState(TypedDict, total=False):
     coordination_check: Optional[Dict[str, Any]]  # Response from coordination agent
     coordination_approved: bool  # Whether coordinator approved the plan
     coordination_recommendations: List[str]  # Suggestions from coordinator
+
+
+# Alias for backward compatibility with imports expecting DepartmentState
+DepartmentState = HealthAgentState

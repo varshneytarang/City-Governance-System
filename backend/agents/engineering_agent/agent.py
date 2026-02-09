@@ -291,8 +291,11 @@ class EngineeringDepartmentAgent:
             end_time = datetime.now()
             execution_ms = int((end_time - start_time).total_seconds() * 1000)
             
-            result_state["completed_at"] = end_time
+            result_state["completed_at"] = end_time.isoformat()
             result_state["execution_time_ms"] = execution_ms
+            # Convert started_at to string if present
+            if "started_at" in result_state and isinstance(result_state["started_at"], datetime):
+                result_state["started_at"] = result_state["started_at"].isoformat()
             
             # Extract response
             response = result_state.get("response", {})

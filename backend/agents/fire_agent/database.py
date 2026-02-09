@@ -1,301 +1,243 @@
 """
-Fire Department Database Queries
+Database connection and query utilities for Fire Department
 
-All database queries for fire stations, trucks, firefighters, equipment, etc.
+USES ACTUAL SCHEMA TABLES:
+- incidents (department='fire') - fire incidents stored here
+- projects (department='fire')
+- work_schedules (department='fire')  
+- workers (department='fire')
+- department_budgets (department='fire')
+
+NOTE: There are NO fire-specific tables in schema. Fire department uses shared tables.
 """
 
-import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import json
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, date
+import logging
 
-# Reuse database connection from water_agent
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from agents.water_agent.database import DatabaseConnection
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
 
+class DatabaseConnection:
+    """Manages PostgreSQL connection and queries"""
+    
+    def __init__(self):
+        self.conn = None
+        self.connect()
+    
+    def connect(self):
+        """Establish database connection"""
+        try:
+            self.conn = psycopg2.connect(
+                host=settings.DB_HOST,
+                port=settings.DB_PORT,
+                database=settings.DB_NAME,
+                user=settings.DB_USER,
+                password=settings.DB_PASSWORD
+            )
+            logger.info(f"✓ Connected to {settings.DB_NAME} (Fire)")
+        except psycopg2.Error as e:
+            logger.error(f"✗ Database connection failed: {e}")
+            raise
+    
+    def close(self):
+        """Close database connection"""
+        if self.conn:
+            self.conn.close()
+    
+    def execute_query(self, query: str, params: tuple = None) -> List[Dict]:
+        """Execute SELECT query and return results as list of dicts"""
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, params or ())
+                return cur.fetchall()
+        except psycopg2.Error as e:
+            logger.error(f"Query error: {e}")
+            logger.error(f"Query: {query}")
+            raise
+
+
 class FireDepartmentQueries:
-    """Fire Department database query methods"""
+    """Database queries for Fire Department using ACTUAL schema tables"""
     
-    def __init__(self, db: DatabaseConnection):
-        self.db = db
+    def __init__(self, db: DatabaseConnection = None):
+        self.db = db or DatabaseConnection()
     
-    def get_fire_stations(self, status: str = None) -> List[Dict]:
-        """Get fire stations, optionally filtered by status"""
-        
-        query = "SELECT * FROM fire_stations"
-        params = ()
-        
-        if status:
-            query += " WHERE status = %s"
-            params = (status,)
-        
-        query += " ORDER BY station_id"
-        
-        return self.db.execute_query(query, params)
+    # ========== FIRE INCIDENTS (stored in incidents table) ==========
     
-    def get_fire_station_by_zone(self, zone: str) -> Optional[Dict]:
-        """Get closest fire station covering a zone"""
-        
+    def get_fire_incidents(self, location: Optional[str] = None, days: int = 90, severity: Optional[str] = None) -> List[Dict]:
+        """Get fire incidents from incidents table"""
         query = """
-            SELECT * FROM fire_stations
-            WHERE %s = ANY(coverage_zones)
-            AND status = 'operational'
-            ORDER BY response_time_avg_minutes ASC
-            LIMIT 1
+            SELECT incident_id, incident_type, location, severity, 
+                   reported_date, reported_by, description, status, 
+                   resolution_date, notes, created_at
+            FROM incidents
+            WHERE department = 'fire'
+            AND reported_date > CURRENT_DATE - INTERVAL %s
         """
+        params: Tuple = (f"{days} days",)
         
-        results = self.db.execute_query(query, (zone,))
-        return results[0] if results else None
+        if location:
+            query += " AND location ILIKE %s"
+            params = (f"{days} days", f"%{location}%")
+        if severity:
+            if location:
+                query += " AND severity = %s"
+                params = (f"{days} days", f"%{location}%", severity)
+            else:
+                query += " AND severity = %s"
+                params = (f"{days} days", severity)
+        
+        query += " ORDER BY reported_date DESC"
+        results = self.db.execute_query(query, params)
+        logger.info(f"✓ Retrieved {len(results)} fire incidents")
+        return results
     
-    def get_available_trucks(self, station_id: int = None, truck_type: str = None, 
-                            min_fuel_percent: int = 30) -> List[Dict]:
-        """Get available trucks, optionally filtered by station and type"""
-        
+    def get_active_fire_incidents(self, location: Optional[str] = None) -> List[Dict]:
+        """Get currently active (unresolved) fire incidents"""
         query = """
-            SELECT * FROM fire_trucks
-            WHERE status = 'available'
-            AND fuel_percent >= %s
-            AND equipment_check_status = 'passed'
-        """
-        params = [min_fuel_percent]
-        
-        if station_id:
-            query += " AND station_id = %s"
-            params.append(station_id)
-        
-        if truck_type:
-            query += " AND truck_type = %s"
-            params.append(truck_type)
-        
-        query += " ORDER BY fuel_percent DESC"
-        
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_truck_by_id(self, truck_id: int) -> Optional[Dict]:
-        """Get truck details by ID"""
-        
-        query = "SELECT * FROM fire_trucks WHERE truck_id = %s"
-        results = self.db.execute_query(query, (truck_id,))
-        return results[0] if results else None
-    
-    def get_available_firefighters(self, station_id: int = None, 
-                                  min_rank: str = None) -> List[Dict]:
-        """Get available firefighters"""
-        
-        query = """
-            SELECT * FROM firefighters
-            WHERE status IN ('on_duty', 'on_call')
+            SELECT incident_id, incident_type, location, severity, 
+                   reported_date, reported_by, description, status, notes
+            FROM incidents
+            WHERE department = 'fire'
+            AND status IN ('reported', 'in_progress', 'investigating')
         """
         params = []
         
-        if station_id:
-            query += " AND station_id = %s"
-            params.append(station_id)
+        if location:
+            query += " AND location ILIKE %s"
+            params.append(f"%{location}%")
         
-        if min_rank:
-            # Filter by rank (basic hierarchy)
-            rank_order = ['firefighter', 'driver', 'captain', 'battalion_chief']
-            if min_rank in rank_order:
-                min_idx = rank_order.index(min_rank)
-                allowed_ranks = rank_order[min_idx:]
-                query += f" AND rank IN ({','.join(['%s'] * len(allowed_ranks))})"
-                params.extend(allowed_ranks)
-        
-        query += " ORDER BY rank DESC, years_of_service DESC"
-        
+        query += " ORDER BY severity DESC, reported_date DESC"
         return self.db.execute_query(query, tuple(params))
     
-    def get_equipment_by_station(self, station_id: int, 
-                                 equipment_type: str = None) -> List[Dict]:
-        """Get equipment at a station"""
-        
+    def get_incidents_by_type(self, incident_type: Optional[str] = None, days: int = 90) -> List[Dict]:
+        """Get fire incidents by type (e.g., 'fire', 'medical emergency', 'hazmat')"""
         query = """
-            SELECT * FROM fire_equipment
-            WHERE station_id = %s
-            AND status = 'available'
+            SELECT incident_id, incident_type, location, severity, 
+                   reported_date, reported_by, description, status, 
+                   resolution_date, notes
+            FROM incidents
+            WHERE department = 'fire'
+            AND reported_date > CURRENT_DATE - INTERVAL %s
         """
-        params = [station_id]
+        params: Tuple = (f"{days} days",)
         
-        if equipment_type:
-            query += " AND equipment_type = %s"
-            params.append(equipment_type)
+        if incident_type:
+            query += " AND incident_type = %s"
+            params = (f"{days} days", incident_type)
         
-        query += " ORDER BY condition DESC, equipment_type"
+        query += " ORDER BY reported_date DESC"
+        return self.db.execute_query(query, params)
+    
+    # ========== SHARED TABLES (department='fire') ==========
+    
+    def get_active_projects(self, location: Optional[str] = None) -> List[Dict]:
+        """Get active fire department projects"""
+        query = """
+            SELECT project_id, project_name, project_type, location, 
+                   estimated_cost, actual_cost, start_date, end_date, 
+                   status, notes
+            FROM projects
+            WHERE department = 'fire' 
+            AND status IN ('approved', 'in_progress', 'planned')
+        """
+        params = []
         
+        if location:
+            query += " AND location ILIKE %s"
+            params.append(f"%{location}%")
+        
+        query += " ORDER BY start_date DESC"
         return self.db.execute_query(query, tuple(params))
     
-    def get_recent_emergency_calls(self, hours: int = 24, 
-                                  status: str = None) -> List[Dict]:
-        """Get recent emergency calls"""
-        
-        cutoff = datetime.now() - timedelta(hours=hours)
-        
+    def get_work_schedule(self, location: Optional[str] = None, days_ahead: int = 7) -> List[Dict]:
+        """Get scheduled fire department work"""
         query = """
-            SELECT * FROM emergency_calls
-            WHERE call_timestamp >= %s
+            SELECT schedule_id, activity_type, location, scheduled_date, 
+                   start_time, end_time, priority, workers_assigned, 
+                   equipment_assigned, status, notes
+            FROM work_schedules
+            WHERE department = 'fire'
+            AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + %s
         """
-        params = [cutoff]
+        params: Tuple = (days_ahead,)
         
-        if status:
-            query += " AND status = %s"
-            params.append(status)
+        if location:
+            query += " AND location ILIKE %s"
+            params = (days_ahead, f"%{location}%")
         
-        query += " ORDER BY call_timestamp DESC"
+        query += " ORDER BY scheduled_date, start_time"
+        return self.db.execute_query(query, params)
+    
+    def get_available_workers(self, role: Optional[str] = None) -> List[Dict]:
+        """Get available fire department workers"""
+        query = """
+            SELECT worker_id, worker_name, role, skills, certifications, 
+                   status, phone, email, hire_date
+            FROM workers
+            WHERE department = 'fire' AND status = 'active'
+        """
+        params = []
         
+        if role:
+            query += " AND role = %s"
+            params.append(role)
+        
+        query += " ORDER BY worker_name"
         return self.db.execute_query(query, tuple(params))
     
-    def get_emergency_call_by_id(self, call_id: int) -> Optional[Dict]:
-        """Get emergency call details"""
-        
-        query = "SELECT * FROM emergency_calls WHERE call_id = %s"
-        results = self.db.execute_query(query, (call_id,))
-        return results[0] if results else None
-    
-    def get_hydrants_by_zone(self, zone: str, status: str = 'operational') -> List[Dict]:
-        """Get hydrants in a zone"""
-        
+    def get_workers_by_certification(self, certification: str) -> List[Dict]:
+        """Get workers with specific certification (e.g., 'EMT', 'Hazmat', 'Fire Level II')"""
         query = """
-            SELECT * FROM fire_hydrants
-            WHERE zone = %s
+            SELECT worker_id, worker_name, role, skills, certifications, 
+                   status, phone, email
+            FROM workers
+            WHERE department = 'fire' 
+            AND status = 'active'
+            AND certifications ILIKE %s
+            ORDER BY worker_name
         """
-        params = [zone]
-        
-        if status:
-            query += " AND status = %s"
-            params.append(status)
-        
-        query += " ORDER BY flow_rate_gpm DESC"
-        
-        return self.db.execute_query(query, tuple(params))
+        return self.db.execute_query(query, (f"%{certification}%",))
     
-    def get_recent_incidents(self, days: int = 30, 
-                            severity: str = None) -> List[Dict]:
-        """Get recent fire incidents"""
-        
-        cutoff = datetime.now() - timedelta(days=days)
-        
+    def get_budget_status(self) -> Optional[Dict]:
+        """Get current fire department budget"""
         query = """
-            SELECT * FROM fire_incidents
-            WHERE incident_date >= %s
-        """
-        params = [cutoff]
-        
-        if severity:
-            query += " AND severity = %s"
-            params.append(severity)
-        
-        query += " ORDER BY incident_date DESC"
-        
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_incidents_by_location(self, location: str, days: int = 90) -> List[Dict]:
-        """Get incidents at a specific location"""
-        
-        cutoff = datetime.now() - timedelta(days=days)
-        
-        query = """
-            SELECT * FROM fire_incidents
-            WHERE location LIKE %s
-            AND incident_date >= %s
-            ORDER BY incident_date DESC
-        """
-        
-        return self.db.execute_query(query, (f'%{location}%', cutoff))
-    
-    def get_budget_status(self) -> Dict[str, Any]:
-        """Get department budget status (from shared budgets table)"""
-        
-        query = """
-            SELECT * FROM budgets
+            SELECT budget_id, department, year, month, total_budget, 
+                   allocated, spent, remaining, utilization_percent, status
+            FROM department_budgets
             WHERE department = 'fire'
             AND year = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND month = EXTRACT(MONTH FROM CURRENT_DATE)
             LIMIT 1
         """
-        
         results = self.db.execute_query(query)
-        
-        if results:
-            budget = results[0]
-            available = budget['allocated'] - budget['spent']
-            utilization = (budget['spent'] / budget['allocated'] * 100) if budget['allocated'] > 0 else 0
-            
-            return {
-                'allocated': float(budget['allocated']),
-                'spent': float(budget['spent']),
-                'available': float(available),
-                'utilization_percent': round(utilization, 2)
-            }
-        else:
-            return {
-                'allocated': 0,
-                'spent': 0,
-                'available': 0,
-                'utilization_percent': 0
-            }
+        return results[0] if results else None
     
-    def log_decision(self, decision_record: Dict[str, Any]) -> int:
-        """Log agent decision to agent_decisions table"""
-        
+    def get_decision_history(self, limit: int = 10) -> List[Dict]:
+        """Get recent decision history"""
         query = """
-            INSERT INTO agent_decisions (
-                agent_type,
-                request_type,
-                request_data,
-                context,
-                plan,
-                tool_results,
-                feasible,
-                feasibility_reason,
-                policy_compliant,
-                policy_violations,
-                confidence,
-                confidence_factors,
-                decision,
-                reasoning,
-                escalation_reason,
-                response,
-                execution_time_ms,
-                created_at
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-            ) RETURNING decision_id
+            SELECT id, request_type, decision, confidence, feasible,
+                   created_at, execution_time_ms
+            FROM agent_decisions
+            WHERE agent_type = 'fire'
+            ORDER BY created_at DESC
+            LIMIT %s
         """
-        
-        params = (
-            'fire',
-            decision_record.get('request_type'),
-            json.dumps(decision_record.get('request_data', {})),
-            json.dumps(decision_record.get('context', {})),
-            json.dumps(decision_record.get('plan', {})),
-            json.dumps(decision_record.get('tool_results', {})),
-            decision_record.get('feasible', False),
-            decision_record.get('feasibility_reason', ''),
-            decision_record.get('policy_ok', False),
-            json.dumps(decision_record.get('policy_violations', [])),
-            decision_record.get('confidence', 0.0),
-            json.dumps(decision_record.get('confidence_factors', {})),
-            decision_record.get('decision', 'escalate'),
-            decision_record.get('reasoning', ''),
-            decision_record.get('escalation_reason'),
-            json.dumps(decision_record.get('response', {})),
-            decision_record.get('execution_time_ms', 0),
-            datetime.now()
-        )
-        
-        result = self.db.execute_query(query, params)
-        return result[0]['decision_id'] if result else None
+        return self.db.execute_query(query, (limit,))
 
 
-def get_db():
-    """Get database connection"""
+# Helper functions
+def get_db() -> DatabaseConnection:
+    """Get database connection instance"""
     return DatabaseConnection()
 
 
-def get_queries(db: DatabaseConnection):
+def get_queries(db: DatabaseConnection = None) -> FireDepartmentQueries:
     """Get queries instance"""
     return FireDepartmentQueries(db)

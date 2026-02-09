@@ -18,6 +18,8 @@ from .config import settings
 
 from .nodes import (
     health_context_loader,
+    intent_analyzer_node,
+    direct_response_generator,
     health_risk_estimator,
     health_planner_node,
     health_policy_node,
@@ -41,7 +43,10 @@ class HealthDepartmentAgent:
     def _build_graph(self):
         builder = StateGraph(HealthAgentState)
 
+        # Add nodes
         builder.add_node("health_context_loader", health_context_loader)
+        builder.add_node("intent_analyzer", intent_analyzer_node)
+        builder.add_node("direct_response", direct_response_generator)
         builder.add_node("health_risk_estimator", health_risk_estimator)
         builder.add_node("health_planner", health_planner_node)
         builder.add_node("coordination_checkpoint", coordination_checkpoint_node)
@@ -49,9 +54,26 @@ class HealthDepartmentAgent:
         builder.add_node("health_confidence", health_confidence_node)
         builder.add_node("output_generator", output_generator_node)
 
-        # Wiring with proactive coordination
+        # Wiring - TWO PATHS based on query type
+        # Path 1: Load context → Analyze intent → Route
         builder.add_edge(START, "health_context_loader")
-        builder.add_edge("health_context_loader", "health_risk_estimator")
+        builder.add_edge("health_context_loader", "intent_analyzer")
+        
+        # Path 2a: Informational queries → Direct response
+        # Path 2b: Action requests → Full planning workflow
+        builder.add_conditional_edges(
+            "intent_analyzer",
+            lambda state: state.get("query_type", "action"),
+            {
+                "informational": "direct_response",
+                "action": "health_risk_estimator"
+            }
+        )
+        
+        # Informational path ends after direct response
+        builder.add_edge("direct_response", END)
+        
+        # Action path continues through planning workflow
         builder.add_edge("health_risk_estimator", "health_planner")
         
         # Proactive coordination checkpoint
@@ -80,7 +102,9 @@ class HealthDepartmentAgent:
         initial_state: HealthAgentState = {
             "input_event": request,
             "context": {},
+            "query_type": "action",  # Default, will be set by intent analyzer
             "intent": "",
+            "needs_planning": True,
             "risk_level": "low",
             "goal": "",
             "plan": {},
@@ -98,17 +122,41 @@ class HealthDepartmentAgent:
             "completed_at": None,
             "agent_version": self.agent_version,
             "execution_time_ms": 0,
-            # Proactive coordination fields
-            "coordination_check": None,
-            "coordination_approved": False,
-            "coordination_recommendations": [],
         }
 
-        result = self.graph.invoke(initial_state)
-        result["completed_at"] = datetime.now()
-        result["execution_time_ms"] = int((result["completed_at"] - start_time).total_seconds() * 1000)
+        logger.info(f"Health Agent processing request: {request.get('type', 'unknown')}")
 
-        return result.get("response", {})
+        try:
+            final_state = self.graph.invoke(initial_state)
+            end_time = datetime.now()
+            execution_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Extract response
+            response = final_state.get("response", {})
+            response["execution_time_ms"] = execution_ms
+            
+            logger.info("=" * 60)
+            logger.info(f"✓ DECISION: {response.get('decision', 'unknown').upper()}")
+            logger.info(f"  Confidence: {final_state.get('confidence', 0):.2%}")
+            logger.info(f"  Execution time: {execution_ms}ms")
+            logger.info("=" * 60)
+            
+            return response
+        except Exception as e:
+            logger.error(f"Health Agent error: {e}", exc_info=True)
+            end_time = datetime.now()
+            return {
+                **initial_state,
+                "response": {
+                    "decision": "error",
+                    "reason": f"Agent error: {str(e)}"
+                },
+                "started_at": start_time.isoformat(),
+                "completed_at": end_time.isoformat(),
+                "execution_time_ms": int((end_time - start_time).total_seconds() * 1000),
+                "escalate": True,
+                "escalation_reason": str(e)
+            }
 
     def close(self):
         logger.info("✓ HealthDepartmentAgent closed")

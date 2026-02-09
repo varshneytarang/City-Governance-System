@@ -43,6 +43,15 @@ def context_loader_node(state: DepartmentState,
         input_event = state.get("input_event", {})
         location = input_event.get("location")
         
+        # Ignore generic/placeholder location values - treat them as "no location filter"
+        if location and location.lower() in ['general', 'all', 'any', 'city', 'citywide']:
+            logger.info(f"⚠ Ignoring generic location filter: '{location}' - loading ALL data")
+            location = None
+        elif location:
+            logger.info(f"📍 Loading data for specific location: '{location}'")
+        else:
+            logger.info(f"📊 No location filter - loading ALL data")
+        
         context = {
             "timestamp": datetime.now().isoformat(),
             "location": location,
@@ -94,6 +103,26 @@ def context_loader_node(state: DepartmentState,
             "high": len([i for i in incidents if i["severity"] == "high"]),
             "medium": len([i for i in incidents if i["severity"] == "medium"]),
             "low": len([i for i in incidents if i["severity"] == "low"])
+        }
+        
+        # Fetch pipeline inspections
+        logger.info(f"  → Checking pipeline inspection history")
+        inspections = queries.get_pipeline_inspections(days=90)
+        context["pipeline_inspections"] = len(inspections)
+        context["failed_inspections"] = len([i for i in inspections if i.get("outcome") == "fail"])
+        
+        # Fetch water readings
+        logger.info(f"  → Checking water network sensor readings")
+        readings = queries.get_water_readings(location=location, hours=24)
+        context["recent_readings"] = len(readings)
+        
+        # Fetch service outages
+        logger.info(f"  → Checking service outages")
+        outages = queries.get_service_outages(location=location, status=None)
+        context["active_outages"] = len(outages)
+        context["outages_by_severity"] = {
+            "critical": len([o for o in outages if o.get("severity") == "critical"]),
+            "high": len([o for o in outages if o.get("severity") == "high"])
         }
         
         # Fetch budget status

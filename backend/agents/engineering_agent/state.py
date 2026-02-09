@@ -81,3 +81,7 @@ class EngineeringState(TypedDict):
     completed_at: Optional[datetime]
     agent_version: str
     execution_time_ms: int
+
+
+# Alias for backward compatibility with imports expecting DepartmentState
+DepartmentState = EngineeringState

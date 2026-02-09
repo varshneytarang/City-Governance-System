@@ -39,6 +39,15 @@ def context_loader_node(state: EngineeringState,
         input_event = state.get("input_event", {})
         location = input_event.get("location")
         
+        # Ignore generic/placeholder location values - treat them as "no location filter"
+        if location and location.lower() in ['general', 'all', 'any', 'city', 'citywide']:
+            logger.info(f"⚠ Ignoring generic location filter: '{location}' - loading ALL data")
+            location = None
+        elif location:
+            logger.info(f"📍 Loading data for specific location: '{location}'")
+        else:
+            logger.info(f"📊 No location filter - loading ALL data")
+        
         context = {
             "timestamp": datetime.now().isoformat(),
             "location": location,

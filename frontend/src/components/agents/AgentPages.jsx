@@ -218,15 +218,20 @@ const WaterAgentPageTemplate = ({
         </div>
       )}
 
-      {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${showChat && !isChatMinimized ? 'ml-[320px]' : 'ml-0'}`}>
+      {/* Main Content - Dynamically adjusted when chat is visible */}
+      <div className={`flex-1 transition-all duration-300 ${showChat && !isChatMinimized ? 'ml-[380px]' : isChatMinimized ? 'ml-12' : 'ml-0'}`}>
         {/* Floating Chat Toggle Button */}
-        {!showChat && (
+        {(!showChat || isChatMinimized) && (
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            onClick={() => setShowChat(true)}
-            className="fixed left-4 bottom-4 z-50 w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+            onClick={() => {
+              setShowChat(true)
+              if (isChatMinimized) {
+                setIsChatMinimized(false)
+              }
+            }}
+            className="fixed left-4 bottom-4 z-50 w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-110"
             style={{ backgroundColor: color }}
             title="Open Chat"
           >

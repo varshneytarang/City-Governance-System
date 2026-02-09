@@ -39,3 +39,7 @@ class FinanceAgentState(TypedDict, total=False):
     coordination_check: Optional[Dict[str, Any]]  # Response from coordination agent
     coordination_approved: bool  # Whether coordinator approved the plan
     coordination_recommendations: List[str]  # Suggestions from coordinator
+
+
+# Alias for backward compatibility with imports expecting DepartmentState
+DepartmentState = FinanceAgentState

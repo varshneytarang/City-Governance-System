@@ -1,11 +1,19 @@
 """
 Database connection and query utilities for Sanitation Department
+
+USES ACTUAL SCHEMA TABLES:
+- sanitation_inspections (sanitation-specific)
+- projects (department='sanitation')
+- work_schedules (department='sanitation')  
+- workers (department='sanitation')
+- incidents (department='sanitation')
+- department_budgets (department='sanitation')
 """
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, date
 import logging
 
@@ -31,7 +39,7 @@ class DatabaseConnection:
                 user=settings.DB_USER,
                 password=settings.DB_PASSWORD
             )
-            logger.info(f"✓ Connected to {settings.DB_NAME}")
+            logger.info(f"✓ Connected to {settings.DB_NAME} (Sanitation)")
         except psycopg2.Error as e:
             logger.error(f"✗ Database connection failed: {e}")
             raise
@@ -40,7 +48,6 @@ class DatabaseConnection:
         """Close database connection"""
         if self.conn:
             self.conn.close()
-            logger.info("Database connection closed")
     
     def execute_query(self, query: str, params: tuple = None) -> List[Dict]:
         """Execute SELECT query and return results as list of dicts"""
@@ -50,181 +57,99 @@ class DatabaseConnection:
                 return cur.fetchall()
         except psycopg2.Error as e:
             logger.error(f"Query error: {e}")
-            raise
-    
-    def execute_insert(self, query: str, params: tuple = None) -> Optional[str]:
-        """Execute INSERT and return inserted ID"""
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute(query, params or ())
-                self.conn.commit()
-                # Get last inserted ID
-                cur.execute("SELECT lastval();")
-                return cur.fetchone()[0]
-        except psycopg2.Error as e:
-            self.conn.rollback()
-            logger.error(f"Insert error: {e}")
-            raise
-    
-    def execute_update(self, query: str, params: tuple = None) -> int:
-        """Execute UPDATE query and return number of affected rows"""
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute(query, params or ())
-                self.conn.commit()
-                return cur.rowcount
-        except psycopg2.Error as e:
-            self.conn.rollback()
-            logger.error(f"Update error: {e}")
+            logger.error(f"Query: {query}")
             raise
 
 
 class SanitationDepartmentQueries:
-    """Database queries specific to Sanitation Department"""
+    """Database queries for Sanitation Department using ACTUAL schema tables"""
     
-    def __init__(self, db: DatabaseConnection):
-        self.db = db
+    def __init__(self, db: DatabaseConnection = None):
+        self.db = db or DatabaseConnection()
     
-    # ========== CONTEXT QUERIES ==========
+    # ========== SANITATION-SPECIFIC TABLE ==========
     
-    def get_active_routes(self, zone: Optional[str] = None) -> List[Dict]:
-        """Get all active sanitation routes"""
+    def get_sanitation_inspections(self, location: Optional[str] = None, days: int = 90) -> List[Dict]:
+        """Get sanitation inspections from sanitation_inspections table"""
         query = """
-            SELECT route_id, route_name, zone, route_type, service_frequency,
-                   estimated_stops, estimated_duration_minutes, avg_waste_volume_tons,
-                   peak_waste_volume_tons, status, assigned_crew_size, last_serviced
-            FROM sanitation_routes
-            WHERE status = 'active'
+            SELECT inspection_id, location, facility, inspection_date, outcome, 
+                   inspector, notes, findings, created_at
+            FROM sanitation_inspections
+            WHERE inspection_date > CURRENT_DATE - INTERVAL %s
+        """
+        params: Tuple = (f"{days} days",)
+        
+        if location:
+            query += " AND location ILIKE %s"
+            params = (f"{days} days", f"%{location}%")
+        
+        query += " ORDER BY inspection_date DESC"
+        results = self.db.execute_query(query, params)
+        logger.info(f"✓ Retrieved {len(results)} sanitation inspections")
+        return results
+    
+    def get_recent_inspections_by_outcome(self, outcome: Optional[str] = None, days: int = 30) -> List[Dict]:
+        """Get recent inspections filtered by outcome (pass/conditional_pass/fail)"""
+        query = """
+            SELECT inspection_id, location, facility, inspection_date, outcome, 
+                   inspector, notes, findings
+            FROM sanitation_inspections
+            WHERE inspection_date > CURRENT_DATE - INTERVAL %s
+        """
+        params: Tuple = (f"{days} days",)
+        
+        if outcome:
+            query += " AND outcome = %s"
+            params = (f"{days} days", outcome)
+        
+        query += " ORDER BY inspection_date DESC"
+        return self.db.execute_query(query, params)
+    
+    # ========== SHARED TABLES (department='sanitation') ==========
+    
+    def get_active_projects(self, location: Optional[str] = None) -> List[Dict]:
+        """Get active sanitation projects"""
+        query = """
+            SELECT project_id, project_name, project_type, location, 
+                   estimated_cost, actual_cost, start_date, end_date, 
+                   status, notes
+            FROM projects
+            WHERE department = 'sanitation' 
+            AND status IN ('approved', 'in_progress', 'planned')
         """
         params = []
-        
-        if zone:
-            query += " AND zone = %s"
-            params.append(zone)
-        
-        query += " ORDER BY route_name"
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_available_trucks(self, truck_type: Optional[str] = None) -> List[Dict]:
-        """Get available trucks"""
-        query = """
-            SELECT truck_id, truck_number, truck_type, capacity_tons,
-                   operational_status, mileage, fuel_level_percent,
-                   engine_condition, compactor_condition, hydraulics_condition,
-                   last_maintenance_date, next_maintenance_due
-            FROM waste_trucks
-            WHERE operational_status = 'active'
-        """
-        params = []
-        
-        if truck_type:
-            query += " AND truck_type = %s"
-            params.append(truck_type)
-        
-        query += " ORDER BY truck_number"
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_collection_schedule(self, zone: Optional[str] = None, days_ahead: int = 7) -> List[Dict]:
-        """Get collection schedule for next N days"""
-        query = """
-            SELECT cs.schedule_id, cs.scheduled_date, cs.scheduled_start_time,
-                   cs.status, cs.crew_size, sr.route_name, sr.zone,
-                   wt.truck_number, wt.truck_type
-            FROM collection_schedules cs
-            LEFT JOIN sanitation_routes sr ON cs.route_id = sr.route_id
-            LEFT JOIN waste_trucks wt ON cs.truck_id = wt.truck_id
-            WHERE cs.scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '%s days'
-        """
-        params = [days_ahead]
-        
-        if zone:
-            query += " AND sr.zone = %s"
-            params.append(zone)
-        
-        query += " ORDER BY cs.scheduled_date ASC, cs.scheduled_start_time ASC"
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_bin_status(self, zone: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
-        """Get waste bin status"""
-        query = """
-            SELECT bin_id, bin_identifier, location, zone, bin_type,
-                   capacity_liters, current_fill_percent, operational_status,
-                   condition, last_emptied
-            FROM waste_bins
-            WHERE 1=1
-        """
-        params = []
-        
-        if zone:
-            query += " AND zone = %s"
-            params.append(zone)
         
         if location:
             query += " AND location ILIKE %s"
             params.append(f"%{location}%")
         
-        query += " ORDER BY current_fill_percent DESC"
+        query += " ORDER BY start_date DESC"
         return self.db.execute_query(query, tuple(params))
     
-    def get_landfill_status(self) -> List[Dict]:
-        """Get landfill capacity and status"""
+    def get_work_schedule(self, location: Optional[str] = None, days_ahead: int = 7) -> List[Dict]:
+        """Get scheduled sanitation work"""
         query = """
-            SELECT landfill_id, name, location, total_capacity_tons,
-                   current_usage_tons, utilization_percent, operational_status,
-                   daily_intake_limit_tons, methane_level, leachate_status,
-                   distance_from_city_km, access_road_condition
-            FROM landfills
-            ORDER BY utilization_percent ASC
-        """
-        return self.db.execute_query(query)
-    
-    def get_recycling_centers(self) -> List[Dict]:
-        """Get recycling center status"""
-        query = """
-            SELECT center_id, name, location, processing_capacity_tons_per_day,
-                   current_load_tons, operational_status, processing_efficiency_percent,
-                   contamination_rate_percent, accepted_materials
-            FROM recycling_centers
-            ORDER BY name
-        """
-        return self.db.execute_query(query)
-    
-    def get_recent_complaints(self, zone: Optional[str] = None, days: int = 30) -> List[Dict]:
-        """Get recent complaints"""
-        query = """
-            SELECT complaint_id, complaint_type, location, zone, priority,
-                   description, status, reported_date, resolution_date
-            FROM complaints
-            WHERE reported_date > CURRENT_TIMESTAMP - INTERVAL '%s days'
-        """
-        params = [days]
-        
-        if zone:
-            query += " AND zone = %s"
-            params.append(zone)
-        
-        query += " ORDER BY reported_date DESC, priority DESC"
-        return self.db.execute_query(query, tuple(params))
-    
-    def get_budget_status(self) -> Dict:
-        """Get current budget status"""
-        query = """
-            SELECT department, year, month, total_budget, allocated, spent, 
-                   remaining, status, utilization_percent
-            FROM department_budgets
+            SELECT schedule_id, activity_type, location, scheduled_date, 
+                   start_time, end_time, priority, workers_assigned, 
+                   equipment_assigned, status, notes
+            FROM work_schedules
             WHERE department = 'sanitation'
-                  AND year = EXTRACT(YEAR FROM CURRENT_DATE)
-                  AND month = EXTRACT(MONTH FROM CURRENT_DATE)
-            LIMIT 1
+            AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + %s
         """
-        results = self.db.execute_query(query)
-        return results[0] if results else None
+        params: Tuple = (days_ahead,)
+        
+        if location:
+            query += " AND location ILIKE %s"
+            params = (days_ahead, f"%{location}%")
+        
+        query += " ORDER BY scheduled_date, start_time"
+        return self.db.execute_query(query, params)
     
     def get_available_workers(self, role: Optional[str] = None) -> List[Dict]:
         """Get available sanitation workers"""
         query = """
-            SELECT worker_id, worker_name, role, skills, status, 
-                   certifications, phone, email
+            SELECT worker_id, worker_name, role, skills, certifications, 
+                   status, phone, email, hire_date
             FROM workers
             WHERE department = 'sanitation' AND status = 'active'
         """
@@ -237,49 +162,45 @@ class SanitationDepartmentQueries:
         query += " ORDER BY worker_name"
         return self.db.execute_query(query, tuple(params))
     
-    # ========== AUDIT/LOGGING ==========
-    
-    def log_decision(self, decision_data: Dict) -> str:
-        """Log agent decision to database"""
+    def get_recent_incidents(self, location: Optional[str] = None, days: int = 30, severity: Optional[str] = None) -> List[Dict]:
+        """Get recent sanitation incidents"""
         query = """
-            INSERT INTO agent_decisions (
-                agent_type, request_type, request_data, context_snapshot,
-                plan_attempted, tool_results, feasible, feasibility_reason,
-                policy_compliant, policy_violations, confidence, confidence_factors,
-                decision, reasoning, escalation_reason, response,
-                agent_version, execution_time_ms, retry_count, completed_at
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            RETURNING id
+            SELECT incident_id, incident_type, location, severity, 
+                   reported_date, reported_by, description, status, 
+                   resolution_date, notes
+            FROM incidents
+            WHERE department = 'sanitation'
+            AND reported_date > CURRENT_DATE - INTERVAL %s
         """
+        params: Tuple = (f"{days} days",)
         
-        params = (
-            decision_data.get("agent_type", "sanitation_department"),
-            decision_data.get("request_type"),
-            json.dumps(decision_data.get("request_data")),
-            json.dumps(decision_data.get("context_snapshot")),
-            json.dumps(decision_data.get("plan_attempted")),
-            json.dumps(decision_data.get("tool_results")),
-            decision_data.get("feasible"),
-            decision_data.get("feasibility_reason"),
-            decision_data.get("policy_compliant"),
-            json.dumps(decision_data.get("policy_violations")),
-            decision_data.get("confidence"),
-            json.dumps(decision_data.get("confidence_factors")),
-            decision_data.get("decision"),
-            decision_data.get("reasoning"),
-            decision_data.get("escalation_reason"),
-            json.dumps(decision_data.get("response")),
-            decision_data.get("agent_version"),
-            decision_data.get("execution_time_ms"),
-            decision_data.get("retry_count"),
-            datetime.now()
-        )
+        if location:
+            query += " AND location ILIKE %s"
+            params = (f"{days} days", f"%{location}%")
+        if severity:
+            if location:
+                query += " AND severity = %s"
+                params = (f"{days} days", f"%{location}%", severity)
+            else:
+                query += " AND severity = %s"
+                params = (f"{days} days", severity)
         
-        result = self.db.execute_query(query, params)
-        return result[0]["id"] if result else None
+        query += " ORDER BY reported_date DESC"
+        return self.db.execute_query(query, params)
+    
+    def get_budget_status(self) -> Optional[Dict]:
+        """Get current sanitation budget"""
+        query = """
+            SELECT budget_id, department, year, month, total_budget, 
+                   allocated, spent, remaining, utilization_percent, status
+            FROM department_budgets
+            WHERE department = 'sanitation'
+            AND year = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND month = EXTRACT(MONTH FROM CURRENT_DATE)
+            LIMIT 1
+        """
+        results = self.db.execute_query(query)
+        return results[0] if results else None
     
     def get_decision_history(self, limit: int = 10) -> List[Dict]:
         """Get recent decision history"""
@@ -287,19 +208,19 @@ class SanitationDepartmentQueries:
             SELECT id, request_type, decision, confidence, feasible,
                    created_at, execution_time_ms
             FROM agent_decisions
-            WHERE agent_type = 'sanitation_department'
+            WHERE agent_type = 'sanitation'
             ORDER BY created_at DESC
             LIMIT %s
         """
         return self.db.execute_query(query, (limit,))
 
 
-# Helper functions to create instances
+# Helper functions
 def get_db() -> DatabaseConnection:
     """Get database connection instance"""
     return DatabaseConnection()
 
 
-def get_queries(db: DatabaseConnection) -> SanitationDepartmentQueries:
+def get_queries(db: DatabaseConnection = None) -> SanitationDepartmentQueries:
     """Get queries instance"""
     return SanitationDepartmentQueries(db)

@@ -40,70 +40,69 @@ def context_loader_node(state: DepartmentState,
         input_event = state.get("input_event", {})
         zone = input_event.get("zone") or input_event.get("location")
         
+        # Ignore generic/placeholder zone values - treat them as "no zone filter"
+        if zone and zone.lower() in ['general', 'all', 'any', 'city', 'citywide']:
+            logger.info(f"⚠ Ignoring generic zone filter: '{zone}' - loading ALL data")
+            zone = None
+        elif zone:
+            logger.info(f"📍 Loading data for specific zone: '{zone}'")
+        else:
+            logger.info(f"📊 No zone filter - loading ALL data")
+        
         context = {
             "timestamp": datetime.now().isoformat(),
             "zone": zone,
         }
         
-        # Fetch active routes
-        logger.info(f"  → Loading active routes for zone: {zone}")
-        routes = queries.get_active_routes(zone=zone)
-        context["active_routes"] = len(routes)
-        context["routes_by_type"] = {}
-        for route in routes:
-            rtype = route.get("route_type", "unknown")
-            context["routes_by_type"][rtype] = context["routes_by_type"].get(rtype, 0) + 1
+        # Fetch sanitation inspections (main sanitation-specific data)
+        logger.info(f"  → Loading recent sanitation inspections")
+        inspections = queries.get_sanitation_inspections(location=zone, days=90)
+        context["total_inspections"] = len(inspections)
+        context["inspections_by_outcome"] = {}
+        for insp in inspections:
+            outcome = insp.get("outcome", "unknown")
+            context["inspections_by_outcome"][outcome] = context["inspections_by_outcome"].get(outcome, 0) + 1
+        context["recent_inspections"] = inspections[:5]  # Store recent 5
         
-        # Fetch available trucks
-        logger.info(f"  → Checking truck availability")
-        trucks = queries.get_available_trucks()
-        context["total_trucks_available"] = len(trucks)
-        context["trucks_by_type"] = {}
-        for truck in trucks:
-            ttype = truck.get("truck_type", "unknown")
-            context["trucks_by_type"][ttype] = context["trucks_by_type"].get(ttype, 0) + 1
+        # Fetch active projects
+        logger.info(f"  → Loading active sanitation projects")
+        projects = queries.get_active_projects(location=zone)
+        context["total_projects"] = len(projects)
+        context["projects_by_status"] = {}
+        for proj in projects:
+            status = proj.get("status", "unknown")
+            context["projects_by_status"][status] = context["projects_by_status"].get(status, 0) + 1
+        context["active_projects"] = projects[:5]  # Store recent 5
         
-        # Fetch collection schedule
-        logger.info(f"  → Loading collection schedule")
-        schedules = queries.get_collection_schedule(zone=zone, days_ahead=7)
-        context["scheduled_collections"] = len(schedules)
-        context["schedule_status"] = {
-            s["status"]: sum(1 for x in schedules if x["status"] == s["status"])
-            for s in schedules
-        }
+        # Fetch work schedule
+        logger.info(f"  → Loading work schedule")
+        schedules = queries.get_work_schedule(location=zone, days_ahead=7)
+        context["scheduled_work_items"] = len(schedules)
+        context["schedule_by_priority"] = {}
+        for sched in schedules:
+            priority = sched.get("priority", "normal")
+            context["schedule_by_priority"][priority] = context["schedule_by_priority"].get(priority, 0) + 1
+        context["upcoming_work"] = schedules[:5]  # Store next 5
         
-        # Fetch bin status
-        logger.info(f"  → Checking bin status")
-        bins = queries.get_bin_status(zone=zone)
-        context["total_bins"] = len(bins)
-        context["bins_critical_fill"] = len([b for b in bins if float(b.get("current_fill_percent", 0)) >= 90])
-        context["bins_full"] = len([b for b in bins if b.get("operational_status") == "full"])
+        # Fetch available workers
+        logger.info(f"  → Checking worker availability")
+        workers = queries.get_available_workers()
+        context["total_workers_available"] = len(workers)
+        context["workers_by_role"] = {}
+        for worker in workers:
+            role = worker.get("role", "unknown")
+            context["workers_by_role"][role] = context["workers_by_role"].get(role, 0) + 1
+        context["available_workers"] = workers[:10]  # Store first 10
         
-        # Fetch landfill status
-        logger.info(f"  → Checking landfill capacity")
-        landfills = queries.get_landfill_status()
-        context["landfills_total"] = len(landfills)
-        context["landfills_operational"] = len([lf for lf in landfills if lf["operational_status"] == "active"])
-        context["avg_landfill_utilization"] = (
-            sum(float(lf.get("utilization_percent", 0)) for lf in landfills) / len(landfills)
-            if landfills else 0
-        )
-        
-        # Fetch recycling centers
-        logger.info(f"  → Checking recycling centers")
-        recycling_centers = queries.get_recycling_centers()
-        context["recycling_centers_total"] = len(recycling_centers)
-        context["recycling_centers_available"] = len([rc for rc in recycling_centers if rc["operational_status"] == "active"])
-        
-        # Fetch recent complaints
-        logger.info(f"  → Checking complaint history")
-        complaints = queries.get_recent_complaints(zone=zone, days=30)
-        context["recent_complaints"] = len(complaints)
-        context["complaints_by_type"] = {}
-        for c in complaints:
-            ctype = c.get("complaint_type", "other")
-            context["complaints_by_type"][ctype] = context["complaints_by_type"].get(ctype, 0) + 1
-        context["unresolved_complaints"] = len([c for c in complaints if c["status"] not in ["resolved", "closed"]])
+        # Fetch recent incidents
+        logger.info(f"  → Loading recent sanitation incidents")
+        incidents = queries.get_recent_incidents(location=zone, days=30)
+        context["total_incidents"] = len(incidents)
+        context["incidents_by_severity"] = {}
+        for inc in incidents:
+            severity = inc.get("severity", "unknown")
+            context["incidents_by_severity"][severity] = context["incidents_by_severity"].get(severity, 0) + 1
+        context["recent_incidents"] = incidents[:5]  # Store recent 5
         
         # Fetch budget status
         logger.info(f"  → Checking budget status")
@@ -117,11 +116,6 @@ def context_loader_node(state: DepartmentState,
             }
         else:
             context["budget"] = None
-        
-        # Fetch available workers
-        logger.info(f"  → Checking worker availability")
-        workers = queries.get_available_workers()
-        context["total_workers_available"] = len(workers)
         context["workers_by_role"] = {}
         for worker in workers:
             role = worker.get("role", "unknown")

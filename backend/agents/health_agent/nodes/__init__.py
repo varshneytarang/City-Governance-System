@@ -1,6 +1,8 @@
 """Health nodes package init"""
 
 from .health_context_loader import health_context_loader
+from .intent_analyzer import intent_analyzer_node
+from .direct_response import direct_response_generator
 from .health_risk_estimator import health_risk_estimator
 from .health_planner_llm import health_planner_llm_node as health_planner_node
 from .output_generator import output_generator_node
@@ -10,6 +12,8 @@ from .coordination_checkpoint import coordination_checkpoint_node
 
 __all__ = [
     'health_context_loader',
+    'intent_analyzer_node',
+    'direct_response_generator',
     'health_risk_estimator',
     'health_planner_node',
     'output_generator_node',

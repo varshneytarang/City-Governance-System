@@ -589,16 +589,19 @@ LIMIT 1;
 
 -- Revenue transactions (credits)
 INSERT INTO financial_transactions (department, account_id, amount, transaction_type, description, metadata, created_at) VALUES
-((SELECT account_id FROM finance_accounts WHERE account_name = 'City General Fund'), 
- NULL, 2500000.00, 'credit', 'Monthly property tax collection', 
+(NULL, 
+ (SELECT account_id FROM finance_accounts WHERE account_name = 'City General Fund'), 
+ 2500000.00, 'credit', 'Monthly property tax collection', 
  '{"source": "Property Tax", "period": "February 2026", "parcels": 12450}'::jsonb, '2026-02-01 10:00:00'),
 
-((SELECT account_id FROM finance_accounts WHERE account_name = 'City General Fund'),
- NULL, 850000.00, 'credit', 'State revenue sharing - Q1 2026',
+(NULL,
+ (SELECT account_id FROM finance_accounts WHERE account_name = 'City General Fund'),
+ 850000.00, 'credit', 'State revenue sharing - Q1 2026',
  '{"source": "State Government", "program": "Revenue Sharing", "quarter": "Q1"}'::jsonb, '2026-02-05 09:00:00'),
 
-((SELECT account_id FROM finance_accounts WHERE account_name = 'Water Operations Account'),
- 'water', 425000.00, 'credit', 'Water utility payments - February',
+('water',
+ (SELECT account_id FROM finance_accounts WHERE account_name = 'Water Operations Account'),
+ 425000.00, 'credit', 'Water utility payments - February',
  '{"source": "Utility Bills", "customers": 8520, "period": "February 2026"}'::jsonb, '2026-02-01 12:00:00');
 
 /* ========================================================= */
@@ -650,7 +653,7 @@ INSERT INTO coordination_decisions (coordination_id, agent_type, agent_id, locat
  ARRAY['road_closure', 'engineering_support', 'traffic_control'], 85000.00,
  '{"task": "pipeline_replacement", "duration": "3_days", "road_closure_hours": "6am-6pm", "detour_routes": ["2nd Ave", "Park Street"]}'::jsonb,
  'resource_conflict', ARRAY['water', 'engineering', 'sanitation'],
- 'sequential_scheduling', 
+ 'sequential_schedule', 
  'Water work scheduled Mon-Wed, Sanitation adjusts collection to Thu-Sat, Engineering provides traffic control',
  0.88, 'Sarah Johnson', 'approved',
  'Coordinated schedule approved. Engineering to provide 2 traffic control personnel daily.',
@@ -680,7 +683,7 @@ INSERT INTO coordination_decisions (coordination_id, agent_type, agent_id, locat
  ARRAY['facility_access', 'parking_coordination', 'signage'], 12000.00,
  '{"task": "vaccination_campaign", "sites": 4, "dates": "Feb 15-Mar 15", "expected_visitors": 8500}'::jsonb,
  'location_conflict', ARRAY['health', 'sanitation', 'engineering'],
- 'scheduling_coordination',
+ 'schedule_coord',
  'Engineering provides temporary parking signs, Sanitation adjusts bin collection schedule at sites',
  0.90, 'Dr. Emily Watson', 'approved',
  'Vaccination sites confirmed. Engineering installs parking signs Feb 14, Sanitation adjusts schedule.',
@@ -1625,7 +1628,7 @@ INSERT INTO workers (department, worker_name, role, skills, certifications, stat
  '["paramedic", "firefighter_II", "hazmat_operations"]'::jsonb, 'active', '+1-555-2002', 'e.davis@cityfire.gov', '2016-08-20'),
 
 ('fire', 'Marcus Washington', 'Fire Engineer', '["apparatus_operation", "pump_operations", "maintenance"]'::jsonb,
- '{"firefighter_II", "driver_operator", "apparatus_maintenance"]'::jsonb, 'active', '+1-555-2003', 'm.washington@cityfire.gov', '2013-11-10'),
+ '["firefighter_II", "driver_operator", "apparatus_maintenance"]'::jsonb, 'active', '+1-555-2003', 'm.washington@cityfire.gov', '2013-11-10'),
 
 ('fire', 'Rachel Foster', 'Fire Inspector', '["code_enforcement", "building_inspection", "fire_investigation"]'::jsonb,
  '["fire_inspector_II", "fire_investigator", "building_code_specialist"]'::jsonb, 'active', '+1-555-2004', 'r.foster@cityfire.gov', '2015-03-05'),
@@ -1735,7 +1738,7 @@ BEGIN
     RAISE NOTICE '💰 FINANCIAL OVERVIEW:';
     RAISE NOTICE '═══════════════════════════════════════════════════════════════════';
     RAISE NOTICE '   February 2026 Budget: $5.36M (allocated: $3.7M, spent: $2.09M)';
-    RAISE NOTICE '   Available Funds: $3.27M (61%)';
+    RAISE NOTICE '   Available Funds: $3.27M (61%%)';
     RAISE NOTICE '   Reserve Funds: $7.86M';
     RAISE NOTICE '   Grant Funding: $3.73M awarded, $2.01M received';
     RAISE NOTICE '   Tax Revenue (Jan 2026): $3.57M';
