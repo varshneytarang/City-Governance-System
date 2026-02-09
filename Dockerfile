@@ -17,15 +17,8 @@ COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (includes all agents in backend/agents/)
 COPY backend /app/backend
-COPY coordination_agent /app/coordination_agent
-COPY engineering_agent /app/engineering_agent
-COPY finance_agent /app/finance_agent
-COPY fire_agent /app/fire_agent
-COPY health_agent /app/health_agent
-COPY sanitation_agent /app/sanitation_agent
-COPY water_agent /app/water_agent
 
 # Set Python path
 ENV PYTHONPATH=/app
