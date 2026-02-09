@@ -27,9 +27,6 @@ COPY health_agent /app/health_agent
 COPY sanitation_agent /app/sanitation_agent
 COPY water_agent /app/water_agent
 
-# Copy .env to root
-COPY .env /app/.env 2>/dev/null || :
-
 # Set Python path
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
