@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import WaterAgentPage from './WaterAgentPage'
 import AgentChatBot from './AgentChatBot'
 import { Flame, Wrench, Heart, DollarSign, Trash2, Home, MessageSquare } from 'lucide-react'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 // Fire Agent Page Component
 export const FireAgentPage = () => {
@@ -201,6 +203,65 @@ const WaterAgentPageTemplate = ({
   const navigate = useNavigate()
   const [showChat, setShowChat] = useState(true)
   const [isChatMinimized, setIsChatMinimized] = useState(false)
+  const [chatHistory, setChatHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(true)
+  
+  // Fetch chat history from API
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/v1/agents/${agentType}/history?limit=10`)
+        if (response.ok) {
+          const data = await response.json()
+          setChatHistory(data.history || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat history:', error)
+      } finally {
+        setLoadingHistory(false)
+      }
+    }
+    
+    fetchHistory()
+    
+    // Refresh history every 30 seconds
+    const interval = setInterval(fetchHistory, 30000)
+    return () => clearInterval(interval)
+  }, [agentType])
+  
+  // Format relative time
+  const getRelativeTime = (timestamp) => {
+    const now = new Date()
+    const past = new Date(timestamp)
+    const diffMs = now - past
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+  }
+  
+  // Extract query summary from request
+  const getQuerySummary = (request) => {
+    if (!request) return 'Query processed'
+    
+    // Try to get the actual query text
+    if (request.query) return request.query
+    if (request.description) return request.description
+    if (request.message) return request.message
+    
+    // Fallback to request type
+    if (request.type) {
+      return request.type
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase())
+    }
+    
+    return 'Query processed'
+  }
   
   return (
     <>
@@ -356,19 +417,40 @@ const WaterAgentPageTemplate = ({
               </div>
               
               <div className="p-4 space-y-3">
-                {recentActions.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="p-4 rounded-xl border hover:shadow-sm transition-all"
-                    style={{ 
-                      background: `${color}05`,
-                      borderColor: `${color}15`
-                    }}
-                  >
-                    <p className="text-sm text-gray-900 mb-1">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+                {loadingHistory ? (
+                  <div className="p-4 text-center text-gray-500">
+                    <div className="animate-pulse">Loading history...</div>
                   </div>
-                ))}
+                ) : chatHistory.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    <p>No recent activity</p>
+                    <p className="text-xs mt-1">Start a conversation in the chat!</p>
+                  </div>
+                ) : (
+                  chatHistory.slice(0, 5).map((item, index) => (
+                    <div
+                      key={item.id || index}
+                      className="p-4 rounded-xl border hover:shadow-sm transition-all"
+                      style={{ 
+                        background: `${color}05`,
+                        borderColor: `${color}15`
+                      }}
+                    >
+                      {item.summary ? (
+                        <div className="text-sm text-gray-900 mb-1 whitespace-pre-line">
+                          {item.summary}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-900 mb-1 line-clamp-2">
+                          {getQuerySummary(item.request)}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        {getRelativeTime(item.created_at)}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

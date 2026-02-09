@@ -30,41 +30,19 @@ class SanitationDepartmentTools:
         """
         Check if trucks are available for route assignment.
         
-        Returns: {
-            "available_count": int,
-            "total_trucks": int,
-            "trucks": [{id, number, type, capacity, fuel_percent, condition}],
-            "sufficient": bool
-        }
+        NOTE: Sanitation trucks table does not exist in schema.
+        Returns placeholder data.
         """
-        try:
-            trucks = self.queries.get_available_trucks(truck_type=truck_type)
-            
-            # Filter by fuel level (must be > 25%)
-            operational_trucks = [
-                t for t in trucks 
-                if float(t.get("fuel_level_percent", 0)) > 25
-            ]
-            
-            return {
-                "available_count": len(operational_trucks),
-                "total_trucks": len(trucks),
-                "sufficient": len(operational_trucks) > 0,
-                "trucks": [
-                    {
-                        "id": str(t["truck_id"]),
-                        "number": t["truck_number"],
-                        "type": t["truck_type"],
-                        "capacity_tons": float(t["capacity_tons"]),
-                        "fuel_percent": float(t.get("fuel_level_percent", 0)),
-                        "condition": t["engine_condition"]
-                    }
-                    for t in operational_trucks[:5]  # Return top 5
-                ]
-            }
-        except Exception as e:
-            logger.error(f"Truck availability check error: {e}")
-            return {"error": str(e), "available_count": 0, "sufficient": False}
+        logger.warning("⚠ Sanitation trucks table does not exist in schema - returning placeholder")
+        
+        # No trucks table exists - return placeholder
+        return {
+            "available_count": 0,
+            "total_trucks": 0,
+            "sufficient": False,
+            "trucks": [],
+            "note": "Schema does not include waste_trucks table"
+        }
     
     # ========== ROUTE CAPACITY TOOLS ==========
     
@@ -72,44 +50,34 @@ class SanitationDepartmentTools:
         """
         Check route capacity and workload.
         
-        Returns: {
-            "routes": [...],
-            "total_routes": int,
-            "overloaded_routes": int,
-            "avg_utilization_percent": float
-        }
+        NOTE: Routes table does not exist in schema.
+        Uses work_schedules and projects as proxy.
         """
+        logger.warning("⚠ Sanitation routes table does not exist - using work schedules")
+        
         try:
-            routes = self.queries.get_active_routes(zone=zone)
-            
-            overloaded = [
-                r for r in routes 
-                if float(r.get("avg_waste_volume_tons", 0)) > float(r.get("peak_waste_volume_tons", 0)) * 0.9
-            ]
-            
-            total_volume = sum(float(r.get("avg_waste_volume_tons", 0)) for r in routes)
-            total_capacity = sum(float(r.get("peak_waste_volume_tons", 1)) for r in routes)
-            avg_utilization = (total_volume / total_capacity * 100) if total_capacity > 0 else 0
+            # Use work schedules as proxy for routes
+            schedules = self.queries.get_work_schedule(location=zone, days_ahead=7)
             
             return {
-                "total_routes": len(routes),
-                "overloaded_routes": len(overloaded),
-                "avg_utilization_percent": round(avg_utilization, 2),
+                "total_routes": len(schedules),
+                "overloaded_routes": 0,
+                "avg_utilization_percent": 0,
                 "routes": [
                     {
-                        "id": str(r["route_id"]),
-                        "name": r["route_name"],
-                        "zone": r["zone"],
-                        "type": r["route_type"],
-                        "frequency": r["service_frequency"],
-                        "avg_volume_tons": float(r["avg_waste_volume_tons"]),
-                        "capacity_tons": float(r["peak_waste_volume_tons"])
+                        "id": str(s.get("schedule_id", "")),
+                        "name": s.get("activity_type", "Unknown"),
+                        "zone": s.get("location", zone or "Unknown"),
+                        "type": s.get("activity_type", "collection"),
+                        "frequency": "scheduled",
+                        "status": s.get("status", "active")
                     }
-                    for r in routes[:10]
-                ]
+                    for s in schedules[:10]
+                ],
+                "note": "Using work_schedules as routes proxy - sanitation_routes table does not exist"
             }
         except Exception as e:
-            logger.error(f"Route capacity check error: {e}")
+            logger.error(f"Route capacity check error: {e}", exc_info=True)
             return {"error": str(e), "total_routes": 0}
     
     # ========== LANDFILL CAPACITY TOOLS ==========
@@ -118,51 +86,21 @@ class SanitationDepartmentTools:
         """
         Check landfill capacity and availability.
         
-        Returns: {
-            "landfills": [...],
-            "total_landfills": int,
-            "at_capacity": int,
-            "avg_utilization_percent": float,
-            "critical_alert": bool
-        }
+        NOTE: Landfills table does not exist in schema.
+        Returns placeholder.
         """
-        try:
-            landfills = self.queries.get_landfill_status()
-            
-            at_capacity = [
-                lf for lf in landfills 
-                if float(lf.get("utilization_percent", 0)) >= 90
-            ]
-            
-            critical = [
-                lf for lf in landfills 
-                if float(lf.get("utilization_percent", 0)) >= 95
-            ]
-            
-            avg_util = sum(float(lf.get("utilization_percent", 0)) for lf in landfills) / len(landfills) if landfills else 0
-            
-            return {
-                "total_landfills": len(landfills),
-                "operational": len([lf for lf in landfills if lf["operational_status"] == "active"]),
-                "at_capacity": len(at_capacity),
-                "critical_alert": len(critical) > 0,
-                "avg_utilization_percent": round(avg_util, 2),
-                "landfills": [
-                    {
-                        "id": str(lf["landfill_id"]),
-                        "name": lf["name"],
-                        "location": lf["location"],
-                        "utilization_percent": float(lf["utilization_percent"]),
-                        "status": lf["operational_status"],
-                        "daily_limit_tons": float(lf.get("daily_intake_limit_tons", 0)),
-                        "distance_km": float(lf.get("distance_from_city_km", 0))
-                    }
-                    for lf in landfills
-                ]
-            }
-        except Exception as e:
-            logger.error(f"Landfill capacity check error: {e}")
-            return {"error": str(e), "total_landfills": 0, "critical_alert": True}
+        logger.warning("⚠ Landfills table does not exist in schema - returning placeholder")
+        
+        # No landfills table exists
+        return {
+            "total_landfills": 0,
+            "operational": 0,
+            "at_capacity": 0,
+            "critical_alert": False,
+            "avg_utilization_percent": 0,
+            "landfills": [],
+            "note": "Schema does not include landfills table"
+        }
     
     # ========== COLLECTION DELAY ASSESSMENT ==========
     
@@ -170,37 +108,28 @@ class SanitationDepartmentTools:
         """
         Assess potential delays in collection schedule.
         
-        Returns: {
-            "delay_risk": "low|medium|high",
-            "factors": [...],
-            "affected_locations": int
-        }
+        Uses available data from incidents and work schedules.
         """
+        logger.warning("⚠ Using incidents and schedules - bins/complaints tables unavailable")
+        
         try:
-            # Check bins status
-            bins = self.queries.get_bin_status(zone=zone, location=location)
-            full_bins = [b for b in bins if float(b.get("current_fill_percent", 0)) >= 90]
-            
             # Check schedule
-            schedules = self.queries.get_collection_schedule(zone=zone, days_ahead=3)
+            schedules = self.queries.get_work_schedule(location=zone or location, days_ahead=3)
             delayed = [s for s in schedules if s.get("status") == "delayed"]
             
-            # Check complaints
-            complaints = self.queries.get_recent_complaints(zone=zone, days=7)
-            missed_collections = [c for c in complaints if c["complaint_type"] == "missed_collection"]
+            # Check incidents as proxy for issues
+            incidents = self.queries.get_recent_incidents(location=zone or location, days=7)
             
             delay_factors = []
-            if len(full_bins) > 5:
-                delay_factors.append(f"{len(full_bins)} bins at/near capacity")
             if len(delayed) > 0:
                 delay_factors.append(f"{len(delayed)} delayed schedules")
-            if len(missed_collections) > 3:
-                delay_factors.append(f"{len(missed_collections)} missed collection complaints")
+            if len(incidents) > 3:
+                delay_factors.append(f"{len(incidents)} recent incidents")
             
             # Determine risk level
-            if len(delay_factors) >= 3 or len(full_bins) > 10:
+            if len(delay_factors) >= 2 or len(incidents) > 5:
                 risk = "high"
-            elif len(delay_factors) >= 2 or len(full_bins) > 5:
+            elif len(delay_factors) >= 1 or len(incidents) > 2:
                 risk = "medium"
             else:
                 risk = "low"
@@ -208,12 +137,12 @@ class SanitationDepartmentTools:
             return {
                 "delay_risk": risk,
                 "factors": delay_factors,
-                "affected_bins": len(full_bins),
                 "delayed_schedules": len(delayed),
-                "recent_complaints": len(missed_collections)
+                "recent_incidents": len(incidents),
+                "note": "Using incidents/schedules - bins/complaints tables unavailable"
             }
         except Exception as e:
-            logger.error(f"Collection delay assessment error: {e}")
+            logger.error(f"Collection delay assessment error: {e}", exc_info=True)
             return {"error": str(e), "delay_risk": "unknown"}
     
     # ========== EQUIPMENT STATUS TOOLS ==========
@@ -222,32 +151,18 @@ class SanitationDepartmentTools:
         """
         Check truck and equipment condition.
         
-        Returns: {
-            "condition_summary": "good|fair|poor",
-            "maintenance_needed": bool,
-            "issues": [...]
-        }
+        NOTE: Trucks table does not exist in schema.
+        Returns placeholder.
         """
-        try:
-            trucks = self.queries.get_available_trucks()
-            
-            if truck_id:
-                trucks = [t for t in trucks if str(t["truck_id"]) == truck_id]
-            
-            issues = []
-            maintenance_needed = []
-            
-            for truck in trucks:
-                truck_issues = []
-                
-                # Check fuel
-                fuel = float(truck.get("fuel_level_percent", 0))
-                if fuel < 25:
-                    truck_issues.append(f"Low fuel: {fuel}%")
-                
-                # Check conditions
-                if truck.get("engine_condition") in ["poor", "critical"]:
-                    truck_issues.append(f"Engine condition: {truck['engine_condition']}")
+        logger.warning("⚠ Trucks table does not exist in schema - returning placeholder")
+        
+        # No trucks table exists
+        return {
+            "condition_summary": "unknown",
+            "maintenance_needed": False,
+            "issues": [],
+            "note": "Schema does not include waste_trucks table"
+        }
                     maintenance_needed.append(truck["truck_number"])
                 
                 if truck.get("compactor_condition") in ["poor", "critical"]:

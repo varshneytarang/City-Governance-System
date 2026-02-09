@@ -331,6 +331,13 @@ def get_agent_decision_result(agent_id: str, job_id: str) -> Any:
 	return {"status": job.get("status"), "result": job.get("result")}
 
 
+@app.get("/api/v1/agents/{agent_id}/history")
+def get_agent_history(agent_id: str, limit: int = 20) -> Any:
+	"""Get decision history for a specific agent"""
+	history = storage.list_decisions_by_agent(agent_id, limit=limit)
+	return {"agent_id": agent_id, "history": history, "count": len(history)}
+
+
 @app.get("/api/v1/health")
 def health_v1():
 	"""Health check endpoint (API v1)"""

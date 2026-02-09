@@ -8,17 +8,78 @@ import {
 } from 'lucide-react'
 import AgentChatBot from './AgentChatBot'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+
 const WaterAgentPage = () => {
   const navigate = useNavigate()
   const [showChat, setShowChat] = useState(true)
   const [isChatMinimized, setIsChatMinimized] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [chatHistory, setChatHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(true)
   
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
+  
+  // Fetch chat history from API
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/v1/agents/water/history?limit=10`)
+        if (response.ok) {
+          const data = await response.json()
+          setChatHistory(data.history || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat history:', error)
+      } finally {
+        setLoadingHistory(false)
+      }
+    }
+    
+    fetchHistory()
+    
+    // Refresh history every 30 seconds
+    const interval = setInterval(fetchHistory, 30000)
+    return () => clearInterval(interval)
+  }, [])
+  
+  // Format relative time
+  const getRelativeTime = (timestamp) => {
+    const now = new Date()
+    const past = new Date(timestamp)
+    const diffMs = now - past
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+  }
+  
+  // Extract query summary from request
+  const getQuerySummary = (request) => {
+    if (!request) return 'Query processed'
+    
+    // Try to get the actual query text
+    if (request.query) return request.query
+    if (request.description) return request.description
+    if (request.message) return request.message
+    
+    // Fallback to request type
+    if (request.type) {
+      return request.type
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase())
+    }
+    
+    return 'Query processed'
+  }
 
   // Hero KPI Stats with trends
   const heroStats = [
@@ -85,14 +146,6 @@ const WaterAgentPage = () => {
     precipitation: '20%',
     icon: Cloud
   }
-
-  const recentActions = [
-    { id: 1, action: 'Pipeline inspection completed - Sector 7', status: 'completed', time: '5 min ago', priority: 'low' },
-    { id: 2, action: 'Water quality test passed - Zone A', status: 'completed', time: '23 min ago', priority: 'low' },
-    { id: 3, action: 'Leak detected and repaired - Main St', status: 'in-progress', time: '1 hour ago', priority: 'high' },
-    { id: 4, action: 'Pressure monitoring initiated', status: 'active', time: '2 hours ago', priority: 'medium' },
-    { id: 5, action: 'Supply optimization completed', status: 'completed', time: '3 hours ago', priority: 'low' },
-  ]
 
   const zones = [
     { name: 'North Zone', status: 'optimal', consumption: '650K L', quality: 98, pressure: 95, tankLevel: 87, coordinates: { lat: 40.7589, lng: -73.9851 } },
@@ -205,7 +258,9 @@ const WaterAgentPage = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className={`min-h-screen relative overflow-hidden transition-all duration-300 ${
+      showChat && !isChatMinimized ? 'ml-[420px]' : 'ml-0'
+    }`}>
       {/* Animated Water-themed Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 -z-10" />
       
@@ -659,8 +714,8 @@ const WaterAgentPage = () => {
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Recent Operations</h2>
-                  <p className="text-purple-100 text-sm">Last 24 hours activity log</p>
+                  <h2 className="text-2xl font-bold mb-1">Recent Activity</h2>
+                  <p className="text-purple-100 text-sm">Chat history with Water Agent</p>
                 </div>
                 <Clock size={28} className="opacity-80" />
               </div>
@@ -668,43 +723,58 @@ const WaterAgentPage = () => {
             
             <div className="p-6">
               <div className="space-y-3">
-                {recentActions.map((action, index) => (
-                  <motion.div
-                    key={action.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.4 + index * 0.1 }}
-                    className="backdrop-blur-sm bg-white/60 border border-white/60 rounded-2xl p-4 hover:bg-white/80 hover:border-blue-200 transition-all"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        action.priority === 'high' ? 'bg-red-100 text-red-600' :
-                        action.priority === 'medium' ? 'bg-orange-100 text-orange-600' :
-                        'bg-green-100 text-green-600'
-                      }`}>
-                        {action.priority === 'high' ? <AlertCircle size={20} /> :
-                         action.priority === 'medium' ? <Wrench size={20} /> :
-                         <CheckCircle size={20} />}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 font-medium mb-2">{action.action}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <StatusBadge status={action.status} />
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock size={11} />
-                            {action.time}
-                          </span>
-                          {action.priority === 'high' && (
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-                              High Priority
-                            </span>
+                {loadingHistory ? (
+                  <div className="text-center py-8">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                    </div>
+                    <p className="text-gray-500 text-sm mt-4">Loading history...</p>
+                  </div>
+                ) : chatHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500 font-medium">No recent activity</p>
+                    <p className="text-gray-400 text-sm mt-1">Start a conversation in the chat!</p>
+                  </div>
+                ) : (
+                  chatHistory.slice(0, 5).map((item, index) => (
+                    <motion.div
+                      key={item.id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1.4 + index * 0.1 }}
+                      className="backdrop-blur-sm bg-white/60 border border-white/60 rounded-2xl p-4 hover:bg-white/80 hover:border-blue-200 transition-all"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100 text-blue-600">
+                          <MessageSquare size={20} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          {item.summary ? (
+                            <div className="text-sm text-gray-900 mb-2 whitespace-pre-line">
+                              {item.summary}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-900 font-medium mb-2 line-clamp-2">
+                              {getQuerySummary(item.request)}
+                            </p>
                           )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Clock size={11} />
+                              {getRelativeTime(item.created_at)}
+                            </span>
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                              Completed
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
               </div>
             </div>
           </motion.div>

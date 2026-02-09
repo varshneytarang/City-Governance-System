@@ -3,6 +3,11 @@ import PageLoader from '../components/PageLoader'
 
 // Lazy load all agent pages
 const WaterAgentPage = lazy(() => import('../components/agents/WaterAgentPage'))
+const FireAgentPage = lazy(() => import('../components/agents/FireAgentPage'))
+const EngineeringAgentPage = lazy(() => import('../components/agents/EngineeringAgentPage'))
+const HealthAgentPage = lazy(() => import('../components/agents/HealthAgentPage'))
+const FinanceAgentPage = lazy(() => import('../components/agents/FinanceAgentPage'))
+const SanitationAgentPage = lazy(() => import('../components/agents/SanitationAgentPage'))
 
 // Individual agent page wrappers
 export const WaterPage = () => (
@@ -11,57 +16,32 @@ export const WaterPage = () => (
   </Suspense>
 )
 
-export const FirePage = () => {
-  const FireAgentPage = lazy(() => 
-    import('../components/agents/AgentPages').then(module => ({ default: module.FireAgentPage }))
-  )
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <FireAgentPage />
-    </Suspense>
-  )
-}
+export const FirePage = () => (
+  <Suspense fallback={<PageLoader />}>
+    <FireAgentPage />
+  </Suspense>
+)
 
-export const EngineeringPage = () => {
-  const EngineeringAgentPage = lazy(() => 
-    import('../components/agents/AgentPages').then(module => ({ default: module.EngineeringAgentPage }))
-  )
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <EngineeringAgentPage />
-    </Suspense>
-  )
-}
+export const EngineeringPage = () => (
+  <Suspense fallback={<PageLoader />}>
+    <EngineeringAgentPage />
+  </Suspense>
+)
 
-export const HealthPage = () => {
-  const HealthAgentPage = lazy(() => 
-    import('../components/agents/AgentPages').then(module => ({ default: module.HealthAgentPage }))
-  )
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <HealthAgentPage />
-    </Suspense>
-  )
-}
+export const HealthPage = () => (
+  <Suspense fallback={<PageLoader />}>
+    <HealthAgentPage />
+  </Suspense>
+)
 
-export const FinancePage = () => {
-  const FinanceAgentPage = lazy(() => 
-    import('../components/agents/AgentPages').then(module => ({ default: module.FinanceAgentPage }))
-  )
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <FinanceAgentPage />
-    </Suspense>
-  )
-}
+export const FinancePage = () => (
+  <Suspense fallback={<PageLoader />}>
+    <FinanceAgentPage />
+  </Suspense>
+)
 
-export const SanitationPage = () => {
-  const SanitationAgentPage = lazy(() => 
-    import('../components/agents/AgentPages').then(module => ({ default: module.SanitationAgentPage }))
-  )
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <SanitationAgentPage />
-    </Suspense>
-  )
-}
+export const SanitationPage = () => (
+  <Suspense fallback={<PageLoader />}>
+    <SanitationAgentPage />
+  </Suspense>
+)

@@ -25,33 +25,21 @@ class FireDepartmentTools:
         """
         Check availability of fire trucks.
         
-        Returns count of available trucks and details.
+        NOTE: Fire department has no dedicated trucks table in schema.
+        Returns placeholder data.
         """
         
         logger.info(f"Checking truck availability (station={station_id}, type={truck_type})")
+        logger.warning("⚠ Fire trucks table does not exist in schema - returning placeholder")
         
-        try:
-            trucks = self.queries.get_available_trucks(
-                station_id=station_id,
-                truck_type=truck_type,
-                min_fuel_percent=min_fuel_percent
-            )
-            
-            return {
-                "available_count": len(trucks),
-                "trucks": trucks,
-                "sufficient": len(trucks) > 0,
-                "details": f"{len(trucks)} trucks available"
-            }
-        
-        except Exception as e:
-            logger.error(f"Error checking truck availability: {e}")
-            return {
-                "available_count": 0,
-                "trucks": [],
-                "sufficient": False,
-                "error": str(e)
-            }
+        # No trucks table exists - return placeholder indicating availability is unknown
+        return {
+            "available_count": 0,
+            "trucks": [],
+            "sufficient": False,
+            "details": "Fire trucks data not available in current schema",
+            "note": "Schema does not include fire_trucks table"
+        }
     
     def check_firefighter_availability(self, station_id: int = None,
                                       required_count: int = 3,
@@ -59,25 +47,34 @@ class FireDepartmentTools:
         """
         Check availability of firefighters.
         
-        Returns count and details of available personnel.
+        Uses workers table with department='fire' filter.
         """
         
         logger.info(f"Checking firefighter availability (station={station_id}, required={required_count})")
         
         try:
-            firefighters = self.queries.get_available_firefighters(
-                station_id=station_id,
-                min_rank=min_rank
-            )
+            # Use get_available_workers - firefighters are stored as workers with department='fire'
+            firefighters = self.queries.get_available_workers(role=min_rank)
             
             available_count = len(firefighters)
             sufficient = available_count >= required_count
             
-            # Check for certifications
+            # Parse certifications - handle both string and list formats
             certifications = {}
             for ff in firefighters:
-                for cert in ff.get('certifications', []):
-                    certifications[cert] = certifications.get(cert, 0) + 1
+                cert_data = ff.get('certifications', '')
+                
+                # Handle different certification formats
+                if isinstance(cert_data, list):
+                    certs = cert_data
+                elif isinstance(cert_data, str) and cert_data:
+                    certs = [c.strip() for c in cert_data.split(',')]
+                else:
+                    certs = []
+                
+                for cert in certs:
+                    if cert:
+                        certifications[cert] = certifications.get(cert, 0) + 1
             
             return {
                 "available_count": available_count,
@@ -89,7 +86,7 @@ class FireDepartmentTools:
             }
         
         except Exception as e:
-            logger.error(f"Error checking firefighter availability: {e}")
+            logger.error(f"Error checking firefighter availability: {e}", exc_info=True)
             return {
                 "available_count": 0,
                 "required_count": required_count,
@@ -102,49 +99,21 @@ class FireDepartmentTools:
         """
         Check status of fire equipment at a station.
         
-        Returns equipment condition and availability.
+        NOTE: Equipment table does not exist in schema.
+        Returns placeholder.
         """
         
         logger.info(f"Checking equipment status (station={station_id}, type={equipment_type})")
+        logger.warning("⚠ Fire equipment table does not exist in schema - returning placeholder")
         
-        try:
-            equipment = self.queries.get_equipment_by_station(
-                station_id=station_id,
-                equipment_type=equipment_type
-            )
-            
-            # Categorize by condition
-            condition_counts = {}
-            for item in equipment:
-                cond = item.get('condition', 'unknown')
-                condition_counts[cond] = condition_counts.get(cond, 0) + 1
-            
-            # Determine overall condition
-            if not equipment:
-                overall = "no_equipment"
-            elif condition_counts.get('poor', 0) > 0 or condition_counts.get('needs_replacement', 0) > 0:
-                overall = "poor"
-            elif condition_counts.get('fair', 0) > 0:
-                overall = "fair"
-            else:
-                overall = "good"
-            
-            return {
-                "equipment_count": len(equipment),
-                "equipment": equipment,
-                "condition_breakdown": condition_counts,
-                "overall_condition": overall,
-                "maintenance_needed": overall in ["poor", "fair"],
-                "details": f"{len(equipment)} items, condition: {overall}"
-            }
-        
-        except Exception as e:
-            logger.error(f"Error checking equipment status: {e}")
-            return {
-                "equipment_count": 0,
-                "overall_condition": "unknown",
-                "error": str(e)
-            }
+        # No equipment table exists
+        return {
+            "equipment_count": 0,
+            "equipment": [],
+            "overall_condition": "unknown",
+            "note": "Schema does not include fire_equipment table",
+            "details": "Equipment data not available in current schema"
+        }
     
     def assess_response_time(self, location: str, zone: str) -> Dict[str, Any]:
         """
@@ -201,37 +170,22 @@ class FireDepartmentTools:
         """
         Check hydrant availability and status in a zone.
         
-        Returns operational hydrants meeting minimum requirements.
+        NOTE: Hydrants table does not exist in schema.
+        Returns placeholder.
         """
         
         logger.info(f"Checking hydrants in {zone}")
+        logger.warning("⚠ Fire hydrants table does not exist in schema - returning placeholder")
         
-        try:
-            hydrants = self.queries.get_hydrants_by_zone(zone, status='operational')
-            
-            # Filter by pressure and flow rate
-            adequate_hydrants = [
-                h for h in hydrants
-                if h.get('pressure_psi', 0) >= min_pressure_psi
-                and h.get('flow_rate_gpm', 0) >= min_flow_gpm
-            ]
-            
-            return {
-                "total_hydrants": len(hydrants),
-                "adequate_hydrants": len(adequate_hydrants),
-                "hydrants": adequate_hydrants,
-                "sufficient": len(adequate_hydrants) > 0,
-                "details": f"{len(adequate_hydrants)}/{len(hydrants)} hydrants meet requirements in {zone}"
-            }
-        
-        except Exception as e:
-            logger.error(f"Error checking hydrants: {e}")
-            return {
-                "total_hydrants": 0,
-                "adequate_hydrants": 0,
-                "sufficient": False,
-                "error": str(e)
-            }
+        # No hydrants table exists
+        return {
+            "total_hydrants": 0,
+            "adequate_hydrants": 0,
+            "hydrants": [],
+            "sufficient": False,
+            "note": "Schema does not include fire_hydrants table",
+            "details": "Hydrant data not available in current schema"
+        }
     
     def get_incident_history(self, location: str = None, 
                             days: int = 90,
@@ -391,6 +345,7 @@ class FireDepartmentTools:
         Check department budget availability.
         
         Returns budget status and whether cost is within budget.
+        Uses department_budgets table.
         """
         
         logger.info(f"Checking budget (estimated cost: {estimated_cost})")
@@ -398,8 +353,19 @@ class FireDepartmentTools:
         try:
             budget = self.queries.get_budget_status()
             
-            available = budget.get('available', 0)
-            utilization = budget.get('utilization_percent', 0)
+            if not budget:
+                return {
+                    "available": 0,
+                    "affordable": False,
+                    "details": "Budget information not available",
+                    "note": "No budget record found for current month"
+                }
+            
+            # Use 'remaining' field from actual schema
+            available = float(budget.get('remaining', 0))
+            utilization = float(budget.get('utilization_percent', 0))
+            total = float(budget.get('total_budget', 0))
+            spent = float(budget.get('spent', 0))
             
             if estimated_cost:
                 affordable = available >= estimated_cost
@@ -409,8 +375,8 @@ class FireDepartmentTools:
                 remaining_after = available
             
             return {
-                "allocated": budget.get('allocated', 0),
-                "spent": budget.get('spent', 0),
+                "total_budget": total,
+                "spent": spent,
                 "available": available,
                 "utilization_percent": utilization,
                 "estimated_cost": estimated_cost or 0,
@@ -421,7 +387,7 @@ class FireDepartmentTools:
             }
         
         except Exception as e:
-            logger.error(f"Error checking budget: {e}")
+            logger.error(f"Error checking budget: {e}", exc_info=True)
             return {
                 "available": 0,
                 "affordable": False,
