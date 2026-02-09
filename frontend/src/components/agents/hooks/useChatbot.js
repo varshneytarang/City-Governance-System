@@ -356,7 +356,7 @@ const useChatbot = (agentType) => {
   // Check backend health
   const checkBackendHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/health`)
+      const response = await fetch(`${API_BASE_URL}/health`)
       const data = await response.json()
       return data.status === 'ok'
     } catch (error) {
