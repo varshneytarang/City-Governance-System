@@ -117,7 +117,7 @@ const useChatbot = (agentType) => {
       attempts++
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/query/${jobId}`)
+        const response = await fetch(`${API_BASE_URL}/query/${jobId}`)
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -238,7 +238,7 @@ const useChatbot = (agentType) => {
       }
 
       // Submit query to backend
-      const response = await fetch(`${API_BASE_URL}/api/v1/query`, {
+      const response = await fetch(`${API_BASE_URL}/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
