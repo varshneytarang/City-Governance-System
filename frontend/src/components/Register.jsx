@@ -65,10 +65,15 @@ const Register = () => {
         throw new Error(data.detail || 'Google registration failed')
       }
 
-      setSuccess('Registration successful! Redirecting to login...')
+      // Store tokens - user is already logged in via Google OAuth
+      localStorage.setItem('city_governance_token', data.token.access_token)
+      localStorage.setItem('city_governance_refresh_token', data.token.refresh_token)
+      localStorage.setItem('city_governance_user', JSON.stringify(data.user))
+
+      setSuccess('Registration successful! Redirecting to dashboard...')
       
       setTimeout(() => {
-        navigate('/login')
+        navigate('/dashboard')
       }, 1500)
 
     } catch (err) {

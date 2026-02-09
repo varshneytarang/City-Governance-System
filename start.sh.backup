@@ -1,0 +1,4 @@
+#!/bin/bash
+# Note: This file is NOT used when using Dockerfile builder
+# The Dockerfile CMD handles the startup
+python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

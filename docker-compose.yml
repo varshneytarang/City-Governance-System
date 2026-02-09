@@ -34,15 +34,15 @@ services:
       - "8000:8000"
     environment:
       # Database
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: departments
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: departments
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       
       # LLM Configuration
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
-      LLM_MODEL: ${LLM_MODEL:-llama-3.1-70b-versatile}
+      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
       GROQ_API_KEY: ${GROQ_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       

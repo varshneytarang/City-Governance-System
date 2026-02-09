@@ -14,14 +14,22 @@ from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings
 
+# Load .env file using python-dotenv for reliability
+from dotenv import load_dotenv
+
 # Determine .env file location (check backend dir, then parent dir)
 _backend_dir = Path(__file__).parent
 _env_path = _backend_dir / ".env"
 if not _env_path.exists():
     # Try parent directory (project root)
     _env_path = _backend_dir.parent / ".env"
-if not _env_path.exists():
-    _env_path = None  # Let Pydantic handle it
+
+# Load the .env file explicitly
+if _env_path and _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+    print(f"✅ Loaded environment from: {_env_path}")
+else:
+    print("⚠️  No .env file found, using environment variables")
 
 
 class GlobalSettings(BaseSettings):
@@ -35,9 +43,9 @@ class GlobalSettings(BaseSettings):
     # Database Configuration
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
-    DB_NAME: str = "departments"
+    DB_NAME: str = "city_mas"
     DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
+    DB_PASSWORD: str = "passwordpassword"
     
     # Agent Behavior Defaults
     MAX_PLANNING_ATTEMPTS: int = 3

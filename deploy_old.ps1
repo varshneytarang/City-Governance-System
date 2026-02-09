@@ -19,7 +19,7 @@ $ErrorActionPreference = "Stop"
 function Write-Success { Write-Host $args -ForegroundColor Green }
 function Write-Info { Write-Host $args -ForegroundColor Cyan }
 function Write-Warning { Write-Host $args -ForegroundColor Yellow }
-function Write-Err { Write-Host $args -ForegroundColor Red }
+function Write-Error { Write-Host $args -ForegroundColor Red }
 
 # Check prerequisites
 function Test-Prerequisites {
@@ -28,49 +28,44 @@ function Test-Prerequisites {
     # Check Docker
     try {
         $dockerVersion = docker --version
-        Write-Success "Docker found: $dockerVersion"
-    }
-    catch {
-        Write-Err "Docker not found. Please install Docker Desktop."
+        Write-Success "✓ Docker found: $dockerVersion"
+    } catch {
+        Write-Error "✗ Docker not found. Please install Docker Desktop."
         exit 1
     }
     
     # Check Docker Compose
     try {
         $composeVersion = docker-compose --version
-        Write-Success "Docker Compose found: $composeVersion"
-    }
-    catch {
-        Write-Err "Docker Compose not found. Please install Docker Compose."
+        Write-Success "✓ Docker Compose found: $composeVersion"
+    } catch {
+        Write-Error "✗ Docker Compose not found. Please install Docker Compose."
         exit 1
     }
     
     # Check if Docker is running
     try {
         docker ps | Out-Null
-        Write-Success "Docker daemon is running"
-    }
-    catch {
-        Write-Err "Docker daemon is not running. Please start Docker Desktop."
+        Write-Success "✓ Docker daemon is running"
+    } catch {
+        Write-Error "✗ Docker daemon is not running. Please start Docker Desktop."
         exit 1
     }
     
     # Check .env file
     if (-not (Test-Path ".env")) {
-        Write-Warning ".env file not found. Creating from .env.example..."
+        Write-Warning "⚠ .env file not found. Creating from .env.example..."
         if (Test-Path ".env.example") {
             Copy-Item ".env.example" ".env"
-            Write-Warning "Please edit .env and add your API keys before continuing."
+            Write-Warning "⚠ Please edit .env and add your API keys before continuing."
             Write-Info "Press Enter when ready..."
             Read-Host
-        }
-        else {
-            Write-Err ".env.example not found. Cannot create .env file."
+        } else {
+            Write-Error "✗ .env.example not found. Cannot create .env file."
             exit 1
         }
-    }
-    else {
-        Write-Success ".env file exists"
+    } else {
+        Write-Success "✓ .env file exists"
     }
 }
 
@@ -80,16 +75,14 @@ function Build-Services {
     
     if ($Dev) {
         docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
-    }
-    else {
+    } else {
         docker-compose build
     }
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "Build completed successfully"
-    }
-    else {
-        Write-Err "Build failed"
+        Write-Success "✓ Build completed successfully"
+    } else {
+        Write-Error "✗ Build failed"
         exit 1
     }
 }
@@ -105,17 +98,24 @@ function Start-Services {
     Write-Info "Waiting for database to be ready - 10 seconds..."
     Start-Sleep -Seconds 10
     
+    # Check if database is healthy
+    $dbHealth = docker-compose ps postgres --format json | ConvertFrom-Json | Select-Object -ExpandProperty Health
+    if ($dbHealth -eq "healthy" -or $dbHealth -eq "") {
+        Write-Success "✓ Database is ready"
+    } else {
+        Write-Warning "⚠ Database health check unclear, continuing anyway..."
+    }
+    
     # Start all services
     Write-Info "Starting all services..."
     if ($Dev) {
         docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-    }
-    else {
+    } else {
         docker-compose up -d
     }
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "All services started successfully"
+        Write-Success "✓ All services started successfully"
         Write-Info ""
         Write-Info "Access the application at:"
         Write-Success "  Frontend:  http://localhost"
@@ -123,9 +123,8 @@ function Start-Services {
         Write-Success "  API Docs:  http://localhost:8000/docs"
         Write-Info ""
         Write-Info "View logs with: .\deploy.ps1 logs"
-    }
-    else {
-        Write-Err "Failed to start services"
+    } else {
+        Write-Error "✗ Failed to start services"
         exit 1
     }
 }
@@ -136,10 +135,9 @@ function Stop-Services {
     docker-compose down
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "Services stopped successfully"
-    }
-    else {
-        Write-Err "Failed to stop services"
+        Write-Success "✓ Services stopped successfully"
+    } else {
+        Write-Error "✗ Failed to stop services"
         exit 1
     }
 }
@@ -171,39 +169,36 @@ function Show-Status {
     
     # Backend health
     try {
-        $backend = Invoke-RestMethod -Uri "http://localhost:8000/health" -TimeoutSec 5 -ErrorAction Stop
-        Write-Success "Backend: Healthy"
-    }
-    catch {
-        Write-Err "Backend: Unhealthy or not responding"
+        $backend = Invoke-RestMethod -Uri "http://localhost:8000/health" -TimeoutSec 5
+        Write-Success "✓ Backend: Healthy"
+    } catch {
+        Write-Error "✗ Backend: Unhealthy or not responding"
     }
     
     # Frontend health
     try {
-        $frontend = Invoke-WebRequest -Uri "http://localhost/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        $frontend = Invoke-WebRequest -Uri "http://localhost/health" -TimeoutSec 5 -UseBasicParsing
         if ($frontend.StatusCode -eq 200) {
-            Write-Success "Frontend: Healthy"
+            Write-Success "✓ Frontend: Healthy"
         }
-    }
-    catch {
-        Write-Err "Frontend: Unhealthy or not responding"
+    } catch {
+        Write-Error "✗ Frontend: Unhealthy or not responding"
     }
     
     # Database health
     try {
-        $db = docker-compose exec -T postgres pg_isready -U postgres 2>&1
+        $db = docker-compose exec -T postgres pg_isready -U postgres
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "Database: Healthy"
+            Write-Success "✓ Database: Healthy"
         }
-    }
-    catch {
-        Write-Err "Database: Unhealthy or not responding"
+    } catch {
+        Write-Error "✗ Database: Unhealthy or not responding"
     }
 }
 
 # Reset everything
 function Reset-All {
-    Write-Warning "This will delete ALL data including database contents!"
+    Write-Warning "⚠ This will delete ALL data including database contents!"
     $confirm = Read-Host "Are you sure? Type 'yes' to continue"
     
     if ($confirm -ne "yes") {
@@ -218,11 +213,10 @@ function Reset-All {
     docker-compose down --rmi local
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "Reset completed successfully"
+        Write-Success "✓ Reset completed successfully"
         Write-Info "Run '.\deploy.ps1 start' to start fresh"
-    }
-    else {
-        Write-Err "Reset failed"
+    } else {
+        Write-Error "✗ Reset failed"
         exit 1
     }
 }
