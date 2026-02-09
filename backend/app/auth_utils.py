@@ -34,25 +34,25 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 # Database connection parameters - parse from DATABASE_URL or individual vars
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     # Parse DATABASE_URL
     parsed = urlparse(DATABASE_URL)
     DB_CONFIG = {
-        "host": parsed.hostname or "localhost",
+        "host": parsed.hostname,
         "port": parsed.port or 5432,
-        "dbname": parsed.path[1:] if parsed.path else "city_mas",  # Remove leading /
-        "user": parsed.username or "postgres",
-        "password": parsed.password or "password"
+        "dbname": parsed.path[1:] if parsed.path else None,  # Remove leading /
+        "user": parsed.username,
+        "password": parsed.password
     }
 else:
-    # Fall back to individual environment variables
+    # Fall back to individual environment variables (no defaults)
     DB_CONFIG = {
-        "host": os.getenv("DB_HOST", "localhost"),
+        "host": os.getenv("DB_HOST"),
         "port": int(os.getenv("DB_PORT", "5432")),
-        "dbname": os.getenv("DB_NAME", "city_mas"),
-        "user": os.getenv("DB_USER", "postgres"),
-        "password": os.getenv("DB_PASSWORD", "password")
+        "dbname": os.getenv("DB_NAME"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD")
     }
 
 
@@ -60,6 +60,8 @@ else:
 
 def get_db_connection():
     """Get database connection"""
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL, sslmode="require")
     return psycopg2.connect(**DB_CONFIG)
 
 

@@ -44,7 +44,8 @@ const Login = () => {
     setError('')
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/google', {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1';
+      const res = await fetch(`${API_URL}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -93,7 +94,8 @@ const Login = () => {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1';
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

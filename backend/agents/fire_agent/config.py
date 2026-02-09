@@ -15,11 +15,11 @@ class Settings(BaseSettings):
     DEPARTMENT: str = "fire"
     
     # Database
-    DB_HOST: str = "localhost"
+    DB_HOST: Optional[str] = None
     DB_PORT: int = 5432
-    DB_NAME: str = "city_governance"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
+    DB_NAME: Optional[str] = None
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
     
     # LLM Configuration
     LLM_PROVIDER: str = "groq"  # "groq" or "openai"

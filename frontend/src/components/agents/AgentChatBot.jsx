@@ -518,7 +518,7 @@ const AgentChatBot = ({
             className={`mb-2 p-2 rounded-lg text-xs flex items-center gap-2 ${isDarkMode ? 'bg-red-900/30 border-red-800 text-red-400' : 'bg-red-50 border-red-200 text-red-700'} border`}
           >
             <WifiOff size={14} />
-            <span>Backend offline. Start the backend server at http://localhost:8000</span>
+            <span>Backend offline. Check backend status at https://web-production-1febd.up.railway.app/api/v1/health</span>
           </motion.div>
         )}
 

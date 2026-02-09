@@ -17,7 +17,7 @@ const useChatbot = (agentType) => {
   
   const pollingIntervalRef = useRef(null)
   const analyticsRef = useRef(null)
-  const API_BASE_URL = 'http://localhost:8000'
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1'
   const MAX_RETRIES = 3
 
   // Initialize analytics
@@ -117,7 +117,7 @@ const useChatbot = (agentType) => {
       attempts++
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/query/${jobId}`)
+        const response = await fetch(`${API_BASE_URL}/query/${jobId}`)
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -238,7 +238,7 @@ const useChatbot = (agentType) => {
       }
 
       // Submit query to backend
-      const response = await fetch(`${API_BASE_URL}/api/v1/query`, {
+      const response = await fetch(`${API_BASE_URL}/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ const useChatbot = (agentType) => {
       } else {
         addMessage({
           type: 'system',
-          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running on http://localhost:8000`,
+          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running at ${API_BASE_URL}`,
           status: 'error',
           canRetry: true,
           originalMessage: message
@@ -356,7 +356,7 @@ const useChatbot = (agentType) => {
   // Check backend health
   const checkBackendHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/health`)
+      const response = await fetch(`${API_BASE_URL}/health`)
       const data = await response.json()
       return data.status === 'ok'
     } catch (error) {

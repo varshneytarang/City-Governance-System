@@ -5,7 +5,7 @@
 
 const Auth = (function() {
     // Configuration
-    const API_BASE_URL = 'http://localhost:8000/api/v1/auth';
+    const API_BASE_URL = 'https://web-production-1febd.up.railway.app/api/v1/auth';
     const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with actual Google Client ID
     
     // Token storage keys
