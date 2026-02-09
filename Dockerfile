@@ -30,9 +30,9 @@ WORKDIR /app/backend
 # Expose port (Railway will override with $PORT)
 EXPOSE 8000
 
-# Health check
+# Health check (uses PORT env var or defaults to 8000)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.getenv(\"PORT\", \"8000\")}/health').read()"
 
-# Start command
-CMD python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Start command (uses shell to expand $PORT)
+CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
