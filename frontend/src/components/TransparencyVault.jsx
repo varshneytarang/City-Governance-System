@@ -41,54 +41,103 @@ const TransparencyVault = ({ reducedMotion }) => {
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Left: 3D Pyramid Vault */}
+          {/* Left: Transparent Vault with Floating Decisions */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8 }}
             className="relative"
           >
-            <div className="relative w-full aspect-square max-w-md mx-auto perspective-1000">
-              {/* Pyramid */}
-              <div
-                className={`relative w-full h-full ${
-                  reducedMotion ? '' : 'animate-spin-slow'
-                }`}
-                style={{ transformStyle: 'preserve-3d' }}
-              >
-                <div className="absolute inset-0 bg-white/90 backdrop-blur-xl border-2 border-gov-blue/30 transform-gpu shadow-professional"
-                     style={{
-                       clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-                       transform: 'rotateX(60deg) rotateZ(45deg)',
-                       boxShadow: '0 0 60px rgba(59, 130, 246, 0.3)',
-                     }}>
-                  {/* Inner crystals */}
-                  {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute w-8 h-8 bg-accent-gold/60 rounded"
-                      style={{
-                        top: `${20 + i * 15}%`,
-                        left: `${25 + (i % 2) * 25}%`,
-                        boxShadow: '0 0 20px rgba(212, 175, 55, 0.6)',
-                      }}
-                      animate={reducedMotion ? {} : {
-                        y: [0, -10, 0],
-                        rotate: [0, 180, 360],
-                      }}
-                      transition={{
-                        duration: 4,
-                        delay: i * 0.5,
-                        repeat: Infinity,
-                      }}
-                    />
-                  ))}
-                </div>
+            <div className="relative w-full aspect-square max-w-md mx-auto">
+              {/* Central Vault Container */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {/* Outer glow ring - pulsing */}
+                <motion.div
+                  className="absolute w-64 h-64 rounded-full border-2 border-gov-blue/30"
+                  animate={reducedMotion ? {} : {
+                    scale: [1, 1.1, 1],
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  style={{
+                    boxShadow: '0 0 40px rgba(59, 130, 246, 0.2)',
+                  }}
+                />
+                
+                {/* Middle layer - slower pulse */}
+                <motion.div
+                  className="absolute w-48 h-48 rounded-full border-2 border-accent-gold/40 bg-gradient-to-br from-gov-blue/5 to-accent-gold/5 backdrop-blur-sm"
+                  animate={reducedMotion ? {} : {
+                    scale: [1, 1.08, 1],
+                    opacity: [0.4, 0.7, 0.4],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.5
+                  }}
+                  style={{
+                    boxShadow: '0 0 30px rgba(212, 175, 55, 0.3)',
+                  }}
+                />
+
+                {/* Core Vault - hexagon shape */}
+                <motion.div
+                  className="absolute w-32 h-32 bg-white/90 backdrop-blur-xl border-2 border-gov-blue/50 shadow-professional flex items-center justify-center"
+                  style={{
+                    clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+                    boxShadow: '0 0 50px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(212, 175, 55, 0.2)',
+                  }}
+                  animate={reducedMotion ? {} : {
+                    rotate: [0, 360],
+                  }}
+                  transition={{
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
+                  <Database className="text-gov-blue" size={40} />
+                </motion.div>
               </div>
+
+              {/* Floating Decision Cards - entering the vault */}
+              {[...Array(6)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-16 h-10 bg-gradient-to-br from-white to-gray-100 rounded shadow-soft border border-gray-200"
+                  style={{
+                    left: `${15 + (i % 3) * 30}%`,
+                    bottom: '-10%',
+                  }}
+                  initial={{ y: 0, opacity: 0, scale: 0.8 }}
+                  animate={reducedMotion ? { y: 0, opacity: 0.6, scale: 1 } : {
+                    y: [0, -420, -420],
+                    opacity: [0, 1, 0],
+                    scale: [0.8, 1, 0.6],
+                  }}
+                  transition={{
+                    duration: 6,
+                    delay: i * 1,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <div className="w-full h-full p-1 flex flex-col justify-center">
+                    <div className="h-1 bg-gov-blue/30 rounded mb-1" />
+                    <div className="h-1 bg-accent-gold/30 rounded w-3/4" />
+                  </div>
+                </motion.div>
+              ))}
 
               {/* Vault Label */}
               <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 text-center w-full">
-                <p className="text-sm font-bold text-gov-blue mb-2">Decision Crystals</p>
+                <p className="text-sm font-bold text-gov-blue mb-2">Secure Decision Vault</p>
                 <div className="flex justify-center gap-6 text-xs text-gov-gray">
                   <span className="flex items-center gap-1">
                     <Lock size={12} /> Immutable
