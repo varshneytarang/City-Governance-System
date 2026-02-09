@@ -298,7 +298,7 @@ const useChatbot = (agentType) => {
       } else {
         addMessage({
           type: 'system',
-          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running at ${API_BASE_URL}`,,
+          content: `❌ Failed to submit request after ${MAX_RETRIES} attempts: ${error.message}\n\nMake sure the backend is running at ${API_BASE_URL}`,
           status: 'error',
           canRetry: true,
           originalMessage: message
