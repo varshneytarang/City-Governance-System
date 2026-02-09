@@ -6,7 +6,7 @@ Tests the entire agent workflow end-to-end with various scenarios.
 
 import pytest
 import time
-from water_agent import WaterDepartmentAgent
+from agents.water_agent import WaterDepartmentAgent
 
 # Rate limit: 30 requests/minute = 2 seconds between requests
 RATE_LIMIT_DELAY = 2.1

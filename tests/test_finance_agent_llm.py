@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from finance_agent import FinanceDepartmentAgent
+from agents.finance_agent import FinanceDepartmentAgent
 
 
 class _MockMessage:
@@ -43,8 +43,8 @@ class _MockClient:
 
 def test_finance_agent_with_mocked_llm(monkeypatch):
     # Patch the LLM helper to return a deterministic mock client
-    import finance_agent.nodes.llm_helper as llm_helper
-    import finance_agent.nodes.output_generator as output_generator
+    import agents.finance_agent.nodes.llm_helper as llm_helper
+    import agents.finance_agent.nodes.output_generator as output_generator
 
     # Patch both the helper and the consumer module (output_generator) where
     # `get_llm_client` was imported at module import time.

@@ -9,7 +9,7 @@ verifies DB queries were invoked during decision processing.
 import json
 import pytest
 
-from health_agent.agent import HealthDepartmentAgent
+from agents.health_agent.agent import HealthDepartmentAgent
 
 
 class _MockMessage:
@@ -72,9 +72,9 @@ def test_health_agent_llm_and_db(monkeypatch):
     monkeypatch.setattr(planner_module.HealthPlannerLLM, "_init_llm_client", fake_init)
 
     # 2) Patch health DB queries to record calls and return sample data
-    import health_agent.database as db_module
+    import agents.health_agent.database as db_module
     import importlib
-    hcl_module = importlib.import_module('health_agent.nodes.health_context_loader')
+    hcl_module = importlib.import_module('agents.health_agent.nodes.health_context_loader')
 
     calls = {
         "get_disease_incidents": 0,

@@ -27,7 +27,7 @@ def run_agent_sync(agent_id: str, input_event: Dict[str, Any]) -> Dict[str, Any]
     try:
         # Prefer explicit mapping for known agents
         if agent_id == "water":
-            from water_agent.agent import WaterDepartmentAgent
+            from agents.water_agent.agent import WaterDepartmentAgent
 
             agent = WaterDepartmentAgent()
             result = agent.decide(input_event)

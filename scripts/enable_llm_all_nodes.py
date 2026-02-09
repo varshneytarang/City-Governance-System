@@ -11,8 +11,8 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from water_agent.nodes.llm_helper import get_llm_client
-from water_agent.config import settings
+from agents.water_agent.nodes.llm_helper import get_llm_client
+from agents.water_agent.config import settings
 
 print("\n" + "🤖 "*30)
 print("ENABLING LLM FOR ALL DECISION NODES")

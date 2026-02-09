@@ -12,7 +12,7 @@ were invoked.
 import json
 import pytest
 
-from finance_agent.agent import FinanceDepartmentAgent
+from agents.finance_agent.agent import FinanceDepartmentAgent
 
 
 class _MockMessage:
@@ -65,12 +65,12 @@ def test_finance_agent_llm_triggers_db_queries(monkeypatch):
     payloads = [revenue_payload, cost_payload, budget_feas_payload, policy_payload, output_payload]
 
     # Patch the LLM client factory to return our mock client (sequence)
-    import finance_agent.nodes.llm_helper as llm_module
+    import agents.finance_agent.nodes.llm_helper as llm_module
     monkeypatch.setattr(llm_module, "get_llm_client", lambda: _MockClient(payloads))
 
     # Patch DB queries factory in both modules
-    import finance_agent.database as db_module
-    import finance_agent.agent as agent_module
+    import agents.finance_agent.database as db_module
+    import agents.finance_agent.agent as agent_module
 
     calls = {"fetch_budget_context": 0, "fetch_audit_log": 0}
 

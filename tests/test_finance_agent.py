@@ -1,6 +1,6 @@
 import pytest
 
-from finance_agent import FinanceDepartmentAgent
+from agents.finance_agent import FinanceDepartmentAgent
 
 
 def test_finance_agent_basic_approve():

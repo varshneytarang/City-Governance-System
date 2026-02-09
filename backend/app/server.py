@@ -21,7 +21,7 @@ from .schemas import InputEvent, DecisionResponse
 from . import jobs, storage
 
 # Import Coordination Agent
-from coordination_agent.agent import CoordinationAgent
+from agents.coordination_agent.agent import CoordinationAgent
 
 # Import Auth Router
 from .routes.auth import router as auth_router

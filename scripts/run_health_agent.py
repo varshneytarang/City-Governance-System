@@ -2,7 +2,7 @@
 
 Usage: python scripts/run_health_agent.py
 """
-from health_agent.agent import HealthDepartmentAgent
+from agents.health_agent.agent import HealthDepartmentAgent
 
 
 def main():

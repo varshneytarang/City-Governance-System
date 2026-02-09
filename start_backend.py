@@ -37,7 +37,7 @@ except ImportError:
 
 # Check if coordination agent is available
 try:
-    from coordination_agent.agent import CoordinationAgent
+    from agents.coordination_agent.agent import CoordinationAgent
     print("✅ Coordination Agent available")
 except ImportError as e:
     print(f"\n❌ Coordination Agent import failed: {e}")

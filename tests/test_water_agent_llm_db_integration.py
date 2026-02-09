@@ -9,7 +9,7 @@ executor calls the corresponding DB query methods.
 import json
 import pytest
 
-from water_agent.agent import WaterDepartmentAgent
+from agents.water_agent.agent import WaterDepartmentAgent
 
 
 class _MockMessage:
@@ -81,8 +81,8 @@ def test_water_agent_llm_triggers_db_queries(monkeypatch):
     # 2) Patch DB queries to record calls and return sample data
     # IMPORTANT: WaterDepartmentAgent imports get_queries into its module namespace,
     # so patch the symbol in water_agent.agent, not only water_agent.database.
-    import water_agent.database as db_module
-    import water_agent.agent as agent_module
+    import agents.water_agent.database as db_module
+    import agents.water_agent.agent as agent_module
 
     calls = {
         "get_active_projects": 0,

@@ -64,7 +64,7 @@ class _MockClient:
 
 def test_health_context_loader_populates(monkeypatch):
     # Mock DB queries to avoid real Postgres
-    import health_agent.database as db_module
+    import agents.health_agent.database as db_module
 
     class HealthQueriesMock:
         def get_disease_incidents(self, location=None, days=30):

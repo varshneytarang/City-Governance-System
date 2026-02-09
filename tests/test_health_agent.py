@@ -1,5 +1,5 @@
 import pytest
-from health_agent import HealthDepartmentAgent
+from agents.health_agent import HealthDepartmentAgent
 
 
 def test_health_agent_smoke():

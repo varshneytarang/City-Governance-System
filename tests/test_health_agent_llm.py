@@ -1,6 +1,6 @@
 import json
 
-from health_agent.agent import HealthDepartmentAgent
+from agents.health_agent.agent import HealthDepartmentAgent
 
 
 class _MockMessage:
@@ -49,7 +49,7 @@ class _MockClient:
 def test_health_agent_planner_llm_monkeypatch(monkeypatch):
     # Patch HealthPlannerLLM methods to force LLM usage and inject mock client
     from health_agent.nodes import health_planner_llm as planner_module
-    import health_agent.database as db_module
+    import agents.health_agent.database as db_module
 
     def fake_check(self):
         return True

@@ -2,7 +2,7 @@
 
 Usage: python scripts/run_finance_agent.py
 """
-from finance_agent import FinanceDepartmentAgent
+from agents.finance_agent import FinanceDepartmentAgent
 
 
 def main():

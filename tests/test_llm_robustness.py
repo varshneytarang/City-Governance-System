@@ -6,7 +6,7 @@ Tests LLM integration, fallback mechanisms, and error handling.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from water_agent import WaterDepartmentAgent
+from agents.water_agent import WaterDepartmentAgent
 from water_agent.nodes import intent_analyzer, goal_setter, planner
 
 

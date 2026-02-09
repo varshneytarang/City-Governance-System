@@ -6,7 +6,7 @@ Tests complete workflows while respecting API rate limits (30 req/min).
 
 import pytest
 import time
-from water_agent.agent import WaterDepartmentAgent
+from agents.water_agent.agent import WaterDepartmentAgent
 
 # Rate limiting configuration - Groq allows 30 requests per minute
 RATE_LIMIT_DELAY = 2.1  # Seconds between requests (30/60 = 0.5, use 2.1 for safety)

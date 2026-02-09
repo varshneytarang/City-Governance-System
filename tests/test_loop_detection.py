@@ -7,7 +7,7 @@ Tests to ensure the system doesn't enter infinite loops.
 import pytest
 import time
 from unittest.mock import patch, Mock
-from water_agent import WaterDepartmentAgent
+from agents.water_agent import WaterDepartmentAgent
 
 
 class TestLoopPrevention:
