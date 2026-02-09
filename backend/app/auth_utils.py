@@ -14,6 +14,15 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
 from urllib.parse import urlparse
+from pathlib import Path
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+
+# Load .env from backend directory
+backend_dir = Path(__file__).parent.parent
+env_path = backend_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger(__name__)
 
