@@ -30,8 +30,8 @@ const Hero = ({ reducedMotion }) => {
 
         setStats({
           agents: Math.floor(easeOut * 6),
-          lines: Math.floor(easeOut * 15000),
-          coverage: Math.floor(easeOut * 90)
+          lines: parseFloat((easeOut * 99.9).toFixed(1)),
+          coverage: Math.floor(easeOut * 247)
         })
 
         if (progress < 1) {
@@ -41,7 +41,7 @@ const Hero = ({ reducedMotion }) => {
 
       animate()
     } else if (inView) {
-      setStats({ agents: 6, lines: 15000, coverage: 90 })
+      setStats({ agents: 6, lines: 99.9, coverage: 247 })
     }
   }, [inView, reducedMotion])
 
@@ -107,20 +107,20 @@ const Hero = ({ reducedMotion }) => {
         >
           <StatCard 
             value={stats.agents} 
-            label="Autonomous Agents" 
+            label="Specialized Departments" 
             suffix="" 
             reducedMotion={reducedMotion}
           />
           <StatCard 
             value={stats.lines} 
-            label="Lines of Code" 
-            suffix="+" 
+            label="Uptime" 
+            suffix="%" 
             reducedMotion={reducedMotion}
           />
           <StatCard 
             value={stats.coverage} 
-            label="Test Coverage" 
-            suffix="%" 
+            label="Availability (24/7)" 
+            suffix="" 
             reducedMotion={reducedMotion}
           />
         </motion.div>

@@ -4,14 +4,14 @@ import { useInView } from 'react-intersection-observer'
 import { Code, Database, TestTube, Zap, Package, GitBranch, Brain, Shield } from 'lucide-react'
 
 const stats = [
-  { value: '15,000+', label: 'Lines of Code', icon: Code, color: 'electric-sapphire' },
-  { value: '6', label: 'Autonomous Agents', icon: Shield, color: 'neon-emerald' },
+  { value: 'Enterprise', label: 'Grade Security', icon: Shield, color: 'electric-sapphire' },
+  { value: 'Multi-Tier', label: 'Architecture', icon: Code, color: 'neon-emerald' },
   { value: '40+', label: 'Database Tables', icon: Database, color: 'nebula-violet' },
-  { value: '90%', label: 'Test Coverage', icon: TestTube, color: 'molten-gold' },
-  { value: '99.7%', label: 'System Uptime', icon: Zap, color: 'electric-sapphire' },
+  { value: '99.9%', label: 'System Uptime', icon: Zap, color: 'molten-gold' },
+  { value: '24/7', label: 'Availability', icon: Zap, color: 'electric-sapphire' },
   { value: '12.4K', label: 'Decisions Logged', icon: Brain, color: 'neon-emerald' },
   { value: '<100ms', label: 'Response Time', icon: Zap, color: 'nebula-violet' },
-  { value: '150+', label: 'Integration Tests', icon: GitBranch, color: 'molten-gold' },
+  { value: 'SOC 2', label: 'Compliance Ready', icon: GitBranch, color: 'molten-gold' },
 ]
 
 const techStack = [
