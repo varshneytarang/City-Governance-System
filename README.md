@@ -78,7 +78,7 @@ graph TB
 | **Frontend** | React 18, Vite, Framer Motion, Three.js | Modern, responsive UI with 3D visualizations |
 | **Backend API** | FastAPI, Uvicorn, Pydantic | High-performance async REST API |
 | **AI Orchestration** | LangGraph, LangChain | Multi-agent coordination & workflow management |
-| **LLM Providers** | Groq (Llama 3.1), OpenAI (GPT-4) | Natural language understanding & generation |
+| **LLM Providers** | Google Gemini Pro, OpenAI (GPT-4) | Natural language understanding & generation |
 | **Database** | PostgreSQL 16, SQLAlchemy | Relational data storage |
 | **Vector DB** | ChromaDB | Semantic search & agent memory |
 | **Authentication** | JWT, OAuth2 | Secure user management |
@@ -88,7 +88,7 @@ graph TB
 
 ## 🚀 Quick Start
 
-**Prerequisites**: Docker 24+, Docker Compose 2.20+, API Key ([Groq](https://console.groq.com) or OpenAI)
+**Prerequisites**: Docker 24+, Docker Compose 2.20+, API Key ([Gemini](https://aistudio.google.com/app/apikey) or OpenAI)
 
 ```bash
 # 1. Clone repository
@@ -97,7 +97,7 @@ cd City-Governance-System
 
 # 2. Configure environment
 cp .env.example .env
-# Edit .env and add your GROQ_API_KEY or OPENAI_API_KEY
+# Edit .env and add your GEMINI_API_KEY or OPENAI_API_KEY
 
 # 3. Start services
 docker-compose up -d
@@ -232,8 +232,8 @@ psql -U cityuser -d citydb -f migrations/comprehensive_seed_data.sql
 
 ```env
 # LLM Provider (choose one)
-GROQ_API_KEY=gsk_xxxxx                    # Recommended (free tier, fast)
-# OPENAI_API_KEY=sk-xxxxx                 # Alternative
+GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXX    # Recommended (free tier, fast)
+# OPENAI_API_KEY=sk-xxxxx                      # Alternative
 
 # Database
 DATABASE_HOST=postgres
@@ -246,7 +246,7 @@ DATABASE_PASSWORD=citypass
 JWT_SECRET_KEY=your-secret-key-change-in-production
 ```
 
-**Get Free Groq API Key**: [https://console.groq.com](https://console.groq.com)
+**Get Free Gemini API Key**: [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 
 ---
 
@@ -286,7 +286,7 @@ python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 
-$env:GROQ_API_KEY="your_key"
+$env:GEMINI_API_KEY="your_key"
 $env:DATABASE_HOST="localhost"
 
 uvicorn main:app --reload
@@ -329,7 +329,7 @@ explorer backend/htmlcov/index.html
 ## 📈 Performance
 
 - **API Response Time**: <100ms average
-- **LLM Inference**: <2s (Groq), <3s (OpenAI)
+- **LLM Inference**: <2s (Gemini), <3s (OpenAI)
 - **Frontend Load**: <2s cold, <500ms cached
 - **Database Queries**: <50ms average
 - **Concurrent Users**: 1000+ supported (horizontal scaling)
@@ -385,7 +385,7 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
 docker-compose logs backend
 
 # Verify API key
-docker-compose exec backend env | findstr GROQ_API_KEY
+docker-compose exec backend env | findstr GEMINI_API_KEY
 ```
 
 **Database connection failed**:
