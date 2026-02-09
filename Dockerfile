@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code (includes all agents in backend/agents/)
 COPY backend /app/backend
 
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Set Python path
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1

@@ -3,5 +3,5 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "bash start.sh"
+startCommand = "bash /app/start.sh"
 healthcheckPath = "/health"
