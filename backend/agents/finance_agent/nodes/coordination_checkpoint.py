@@ -51,10 +51,14 @@ def coordination_checkpoint_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if cost_estimates.get("funding_source"):
             resources.append(cost_estimates["funding_source"])
         
-        # Get total estimated cost
+        # Get total estimated cost and normalize
         estimated_cost = cost_estimates.get("total_cost", 0)
         if not estimated_cost and cost_estimates.get("amount"):
             estimated_cost = cost_estimates["amount"]
+        try:
+            estimated_cost = float(estimated_cost) if estimated_cost is not None else 0.0
+        except (TypeError, ValueError):
+            estimated_cost = 0.0
         
         logger.info(f"📡 [Finance] Sending coordination request: location={location}, cost=${estimated_cost}")
         

@@ -53,8 +53,36 @@ def memory_logger_node(state: DepartmentState, queries: SanitationDepartmentQuer
             "execution_time_ms": state.get("execution_time_ms", 0)
         }
         
+        # Sanitizer to convert dates/decimals and non-JSON types
+        def _sanitize(obj):
+            from datetime import date, datetime
+            from decimal import Decimal
+
+            if obj is None:
+                return None
+            if isinstance(obj, (str, int, float, bool)):
+                return obj
+            if isinstance(obj, (date, datetime)):
+                return obj.isoformat()
+            if isinstance(obj, Decimal):
+                try:
+                    return float(obj)
+                except Exception:
+                    return str(obj)
+            if isinstance(obj, dict):
+                return {k: _sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
+            try:
+                return str(obj)
+            except Exception:
+                return None
+
+        # Sanitize record for DB insertion
+        decision_record_sanitized = _sanitize(decision_record)
+
         # Log to database
-        decision_id = queries.log_decision(decision_record)
+        decision_id = queries.log_decision(decision_record_sanitized)
         
         state["decision_id"] = decision_id
         

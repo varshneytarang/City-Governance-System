@@ -23,26 +23,39 @@ class SanitationDepartmentTools:
     
     # ========== TRUCK AVAILABILITY TOOLS ==========
     
-    def check_truck_availability(self, 
-                                 zone: str = None,
+    def check_truck_availability(self,
+                                 location: str = None,
                                  truck_type: str = None,
-                                 date: str = None) -> Dict:
+                                 date: str = None,
+                                 min_fuel_percent: int = None,
+                                 **kwargs) -> Dict:
         """
         Check if trucks are available for route assignment.
         
         NOTE: Sanitation trucks table does not exist in schema.
         Returns placeholder data.
         """
-        logger.warning("⚠ Sanitation trucks table does not exist in schema - returning placeholder")
-        
-        # No trucks table exists - return placeholder
-        return {
-            "available_count": 0,
-            "total_trucks": 0,
-            "sufficient": False,
-            "trucks": [],
-            "note": "Schema does not include waste_trucks table"
-        }
+        # There is no trucks table in schema; use workers as proxy for available staff
+        logger.info("Using workers table as proxy for truck/crew availability")
+        try:
+            # worker 'role' can be passed via truck_type (e.g., driver, operator)
+            workers = self.queries.get_available_workers(role=truck_type) if truck_type else self.queries.get_available_workers()
+
+            # If location is provided and workers have a location field, filter
+            if location:
+                workers = [w for w in workers if location.lower() in (w.get("location") or "").lower()]
+
+            available_count = len(workers)
+
+            return {
+                "available_count": available_count,
+                "sufficient": available_count > 0,
+                "workers": workers,
+                "note": "Using workers table as proxy for crew availability"
+            }
+        except Exception as e:
+            logger.error(f"Truck availability error: {e}")
+            return {"error": str(e), "available_count": 0}
     
     # ========== ROUTE CAPACITY TOOLS ==========
     
@@ -82,7 +95,7 @@ class SanitationDepartmentTools:
     
     # ========== LANDFILL CAPACITY TOOLS ==========
     
-    def check_landfill_capacity(self) -> Dict:
+    def check_landfill_capacity(self, min_capacity_percent: int = None, **kwargs) -> Dict:
         """
         Check landfill capacity and availability.
         
@@ -90,8 +103,6 @@ class SanitationDepartmentTools:
         Returns placeholder.
         """
         logger.warning("⚠ Landfills table does not exist in schema - returning placeholder")
-        
-        # No landfills table exists
         return {
             "total_landfills": 0,
             "operational": 0,
@@ -147,7 +158,7 @@ class SanitationDepartmentTools:
     
     # ========== EQUIPMENT STATUS TOOLS ==========
     
-    def check_equipment_status(self, truck_id: str = None) -> Dict:
+    def check_equipment_status(self, truck_id: str = None, equipment_type: str = None, **kwargs) -> Dict:
         """
         Check truck and equipment condition.
         
@@ -155,39 +166,56 @@ class SanitationDepartmentTools:
         Returns placeholder.
         """
         logger.warning("⚠ Trucks table does not exist in schema - returning placeholder")
-        
-        # No trucks table exists
-        return {
-            "condition_summary": "unknown",
-            "maintenance_needed": False,
-            "issues": [],
-            "note": "Schema does not include waste_trucks table"
-        }
-                    maintenance_needed.append(truck["truck_number"])
-                
-                if truck.get("compactor_condition") in ["poor", "critical"]:
-                    truck_issues.append(f"Compactor condition: {truck['compactor_condition']}")
-                    maintenance_needed.append(truck["truck_number"])
-                
-                if truck_issues:
-                    issues.append({
-                        "truck": truck["truck_number"],
-                        "issues": truck_issues
-                    })
-            
-            # Overall condition
-            if len(maintenance_needed) > len(trucks) * 0.5:
+        # Attempt to infer equipment status from work schedules/equipment assignments
+        try:
+            schedules = self.queries.get_work_schedule(days_ahead=7)
+            maintenance_needed = []
+            issues = []
+            trucks_seen = set()
+
+            for s in schedules:
+                eq = s.get("equipment_assigned")
+                if not eq:
+                    continue
+                # equipment_assigned can be a list or a comma-separated string
+                if isinstance(eq, str):
+                    eq_list = [e.strip() for e in eq.split(",") if e.strip()]
+                elif isinstance(eq, list):
+                    eq_list = eq
+                else:
+                    eq_list = [str(eq)]
+
+                for truck_ref in eq_list:
+                    truck_num = str(truck_ref)
+                    trucks_seen.add(truck_num)
+                    # no detailed condition info available; flag if id present
+                    # placeholder heuristic: if 'old' in id or numeric id above a threshold, mark for maintenance
+                    if "old" in truck_num.lower():
+                        maintenance_needed.append(truck_num)
+                        issues.append({"truck": truck_num, "issues": ["age_suspected"]})
+
+            if not trucks_seen:
+                return {
+                    "condition_summary": "unknown",
+                    "maintenance_needed": False,
+                    "issues": [],
+                    "note": "No equipment assignment data available in work_schedules"
+                }
+
+            # determine coarse condition
+            if len(maintenance_needed) > len(trucks_seen) * 0.5:
                 condition = "poor"
             elif len(maintenance_needed) > 0:
                 condition = "fair"
             else:
                 condition = "good"
-            
+
             return {
                 "condition_summary": condition,
                 "maintenance_needed": len(maintenance_needed) > 0,
-                "trucks_needing_maintenance": list(set(maintenance_needed)),
-                "issues": issues
+                "trucks_needing_maintenance": list(maintenance_needed),
+                "issues": issues,
+                "tracked_trucks": list(trucks_seen)
             }
         except Exception as e:
             logger.error(f"Equipment status check error: {e}")
@@ -207,7 +235,11 @@ class SanitationDepartmentTools:
         }
         """
         try:
-            complaints = self.queries.get_recent_complaints(zone=zone, days=days)
+            # queries may expose recent complaints or use incidents as a proxy
+            if hasattr(self.queries, "get_recent_complaints"):
+                complaints = self.queries.get_recent_complaints(zone=zone, days=days)
+            else:
+                complaints = self.queries.get_recent_incidents(location=zone, days=days)
             
             # Filter by location if specified
             if location:
@@ -254,36 +286,19 @@ class SanitationDepartmentTools:
             "available": int
         }
         """
-        try:
-            centers = self.queries.get_recycling_centers()
-            
-            at_capacity = [c for c in centers if c.get("operational_status") == "at_capacity"]
-            available = [c for c in centers if c.get("operational_status") == "active"]
-            
-            return {
-                "total_centers": len(centers),
-                "available": len(available),
-                "at_capacity": len(at_capacity),
-                "centers": [
-                    {
-                        "id": str(c["center_id"]),
-                        "name": c["name"],
-                        "location": c["location"],
-                        "capacity_per_day": float(c.get("processing_capacity_tons_per_day", 0)),
-                        "current_load": float(c.get("current_load_tons", 0)),
-                        "status": c["operational_status"],
-                        "efficiency": float(c.get("processing_efficiency_percent", 0))
-                    }
-                    for c in centers
-                ]
-            }
-        except Exception as e:
-            logger.error(f"Recycling center check error: {e}")
-            return {"error": str(e), "total_centers": 0}
+        # Recycling centers table/query not available in current sanitation queries
+        logger.warning("⚠ Recycling centers query not available - returning placeholder")
+        return {
+            "total_centers": 0,
+            "available": 0,
+            "at_capacity": 0,
+            "centers": [],
+            "note": "No recycling center data available in queries"
+        }
     
     # ========== WASTE VOLUME ESTIMATION ==========
     
-    def estimate_waste_volume(self, zone: str, date: str = None) -> Dict:
+    def estimate_waste_volume(self, location: str = None, route_id: str = None, date: str = None, **kwargs) -> Dict:
         """
         Estimate waste volume for zone on given date.
         
@@ -294,19 +309,22 @@ class SanitationDepartmentTools:
         }
         """
         try:
-            routes = self.queries.get_active_routes(zone=zone)
-            
-            total_avg = sum(float(r.get("avg_waste_volume_tons", 0)) for r in routes)
-            total_peak = sum(float(r.get("peak_waste_volume_tons", 1)) for r in routes)
-            
+            # No active_routes query available - use work schedules as a proxy
+            schedules = self.queries.get_work_schedule(location=location, days_ahead=7)
+
+            # crude estimation: assume average 0.5 tons per scheduled route
+            total_avg = sum(0.5 for _ in schedules)
+            # peak capacity estimate: assume 1.0 tons per route
+            total_peak = sum(1.0 for _ in schedules) if schedules else 1.0
+
             utilization = (total_avg / total_peak * 100) if total_peak > 0 else 0
-            
+
             return {
                 "estimated_tons": round(total_avg, 2),
                 "peak_capacity_tons": round(total_peak, 2),
                 "utilization_percent": round(utilization, 2),
                 "zone": zone,
-                "routes_included": len(routes)
+                "routes_included": len(schedules)
             }
         except Exception as e:
             logger.error(f"Waste volume estimation error: {e}")
@@ -314,7 +332,7 @@ class SanitationDepartmentTools:
     
     # ========== BUDGET CHECK ==========
     
-    def check_budget_availability(self, estimated_cost: float = 0) -> Dict:
+    def check_budget_availability(self, estimated_cost: Optional[float] = None, **kwargs) -> Dict:
         """
         Check if budget is available for operation.
         
@@ -329,17 +347,19 @@ class SanitationDepartmentTools:
             
             if not budget:
                 return {"available": False, "remaining": 0, "sufficient": False}
-            
-            remaining = float(budget.get("remaining", 0))
-            sufficient = remaining >= estimated_cost
+
+            # Normalize values safely
+            remaining = float(budget.get("remaining") or 0)
+            est_cost = float(estimated_cost or 0)
+            sufficient = remaining >= est_cost
             
             return {
                 "available": remaining > 0,
                 "remaining": remaining,
                 "sufficient": sufficient,
-                "total_budget": float(budget.get("total_budget", 0)),
-                "spent": float(budget.get("spent", 0)),
-                "utilization_percent": float(budget.get("utilization_percent", 0))
+                "total_budget": float(budget.get("total_budget") or 0),
+                "spent": float(budget.get("spent") or 0),
+                "utilization_percent": float(budget.get("utilization_percent") or 0)
             }
         except Exception as e:
             logger.error(f"Budget check error: {e}")

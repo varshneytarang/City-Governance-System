@@ -108,21 +108,27 @@ def context_loader_node(state: DepartmentState,
         logger.info(f"  → Checking budget status")
         budget = queries.get_budget_status()
         if budget:
+            # Guard against None values in budget fields
             context["budget"] = {
-                "total": float(budget["total_budget"]),
-                "spent": float(budget["spent"]),
-                "remaining": float(budget["remaining"]),
-                "utilization_percent": float(budget["utilization_percent"])
+                "total": float(budget.get("total_budget") or 0),
+                "spent": float(budget.get("spent") or 0),
+                "remaining": float(budget.get("remaining") or 0),
+                "utilization_percent": float(budget.get("utilization_percent") or 0)
             }
         else:
             context["budget"] = None
-        context["workers_by_role"] = {}
-        for worker in workers:
-            role = worker.get("role", "unknown")
-            context["workers_by_role"][role] = context["workers_by_role"].get(role, 0) + 1
-        
-        logger.info(f"✓ Context loaded: {len(routes)} routes, {len(trucks)} trucks, "
-                   f"{len(bins)} bins, {len(complaints)} recent complaints")
+
+        # workers_by_role already built above; ensure it's present
+        context.setdefault("workers_by_role", {})
+
+        # Friendly summary log using available context counts
+        logger.info(
+            f"✓ Context loaded: inspections={context.get('total_inspections',0)}, "
+            f"projects={context.get('total_projects',0)}, "
+            f"scheduled_work={context.get('scheduled_work_items',0)}, "
+            f"workers_available={context.get('total_workers_available',0)}, "
+            f"recent_incidents={context.get('total_incidents',0)}"
+        )
         
         state["context"] = context
         

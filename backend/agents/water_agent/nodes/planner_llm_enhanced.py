@@ -1,6 +1,14 @@
 """
 LLM-Enhanced Planner Node
 
+            # Log tools if present in state
+            tools_obj = state.get('tools')
+            if tools_obj:
+                try:
+                    tool_methods = [m for m in dir(tools_obj) if callable(getattr(tools_obj, m)) and not m.startswith('_')]
+                    logger.info(f"  🧰 Planner sees tools: {tool_methods}")
+                except Exception:
+                    logger.info("  🧰 Planner could not enumerate tools")
 This version ACTUALLY calls your Groq/OpenAI API.
 Replace the existing planner.py with this to enable LLM.
 """
@@ -14,6 +22,7 @@ from ..state import DepartmentState
 from ..config import settings
 
 logger = logging.getLogger(__name__)
+                    state=state
 
 
 class WaterPlannerWithLLM:
@@ -44,7 +53,7 @@ class WaterPlannerWithLLM:
     
     def _init_llm_client(self):
         """Initialize LLM client (OpenAI or Groq)"""
-        try:
+                           context: Dict, input_event: Dict, state: Dict = None) -> List[Dict]:
             if self.llm_provider == "groq":
                 # Groq uses OpenAI-compatible API
                 import openai
@@ -113,54 +122,60 @@ class WaterPlannerWithLLM:
                 "primary_plan": None,
                 "alternative_plans": [],
                 "error": str(e),
-                "llm_used": False
-            }
-    
-    def _generate_llm_plans(self, intent: str, goal: str, 
-                           context: Dict, input_event: Dict) -> List[Dict]:
-        """
-        Generate plans using LLM (OpenAI/Groq)
-        
-        THIS IS WHERE THE ACTUAL API CALL HAPPENS! 🚀
-        """
-        
-        # Build prompt for LLM
-        prompt = self._build_planning_prompt(intent, goal, context, input_event)
-        
-        try:
-            # Make API call
-            response = self.client.chat.completions.create(
-                model=self._get_model_name(),
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a Water Department planning AI. Generate structured plans "
-                            "for departmental operations. Return ONLY valid JSON with this structure: "
-                            '{"plans": [{"name": "Plan A", "steps": ["step1", "step2"], '
-                            '"estimated_duration": "X days", "estimated_cost": 50000, '
-                            '"resources_needed": ["resource1"], "risk_level": "low"}]}'
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=settings.LLM_TEMPERATURE,
-                max_tokens=1000
-            )
-            
-            # Extract response
-            llm_output = response.choices[0].message.content
-            logger.info(f"LLM raw output: {llm_output[:200]}...")
-            
-            # Parse JSON response
-            try:
-                parsed = json.loads(llm_output)
-                plans = parsed.get("plans", [])
-                
-                if not plans:
+                try:
+                    # Make API call
+                    response = self.client.chat.completions.create(
+                        model=self._get_model_name(),
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a municipal water planning assistant. Return only JSON."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        temperature=settings.LLM_TEMPERATURE,
+                        max_tokens=1000
+                    )
+
+                    # Extract response
+                    llm_output = response.choices[0].message.content
+                    logger.info(f"LLM raw output: {llm_output[:200]}...")
+
+                    # Clean markdown fences if present
+                    llm_output_clean = llm_output.strip()
+                    if llm_output_clean.startswith("```json"):
+                        llm_output_clean = llm_output_clean[7:]
+                    elif llm_output_clean.startswith("```"):
+                        llm_output_clean = llm_output_clean[3:]
+                    if llm_output_clean.endswith("```"):
+                        llm_output_clean = llm_output_clean[:-3]
+
+                    # Parse and validate using pydantic schema
+                    try:
+                        parsed = json.loads(llm_output_clean)
+                        from ..schemas import PlannerOutput
+
+                        validated = PlannerOutput.parse_obj(parsed)
+                        plans = [p.dict() for p in validated.plans]
+
+                        if not plans:
+                            logger.warning("LLM returned no plans after validation, using fallback")
+                            return self._generate_deterministic_plans(intent, goal, context, input_event)
+
+                        return plans
+
+                    except Exception as e:
+                        logger.error(f"Failed to parse/validate LLM JSON: {e}")
+                        # Fallback to deterministic
+                        return self._generate_deterministic_plans(intent, goal, context, input_event)
+
+                except Exception as e:
+                    logger.error(f"LLM API call failed: {e}")
+                    # Fallback to deterministic
+                    return self._generate_deterministic_plans(intent, goal, context, input_event)
                     logger.warning("LLM returned no plans, using fallback")
                     return self._generate_deterministic_plans(intent, goal, context, input_event)
                 

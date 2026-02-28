@@ -4,6 +4,11 @@ Configuration for Engineering Department Agent
 
 from pydantic_settings import BaseSettings
 from typing import Optional
+try:
+    import global_config
+    _global_llm = getattr(global_config, "global_llm_settings", None)
+except Exception:
+    _global_llm = None
 
 
 class Settings(BaseSettings):
@@ -16,12 +21,12 @@ class Settings(BaseSettings):
     DB_USER: Optional[str] = None
     DB_PASSWORD: Optional[str] = None
     
-    # LLM
-    LLM_PROVIDER: str = "openai"  # openai, groq, or local
-    OPENAI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
-    LLM_MODEL: str = "llama-3.3-70b-versatile"
-    LLM_TEMPERATURE: float = 0.3
+    # LLM - prefer global LLM settings when available
+    LLM_PROVIDER: str = _global_llm.LLM_PROVIDER if _global_llm else "openai"
+    OPENAI_API_KEY: Optional[str] = _global_llm.OPENAI_API_KEY if _global_llm else None
+    GROQ_API_KEY: Optional[str] = _global_llm.GROQ_API_KEY if _global_llm else None
+    LLM_MODEL: str = _global_llm.LLM_MODEL if _global_llm else "llama-3.3-70b-versatile"
+    LLM_TEMPERATURE: float = _global_llm.LLM_TEMPERATURE if _global_llm else 0.3
     
     # Agent
     DEPARTMENT: str = "engineering"

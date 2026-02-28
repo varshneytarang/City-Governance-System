@@ -44,6 +44,11 @@ def coordination_checkpoint_node(state: Dict[str, Any]) -> Dict[str, Any]:
         
         location = input_event.get("location", input_event.get("zone", "Unknown"))
         estimated_cost = input_event.get("estimated_cost", 0)
+        # Normalize estimated_cost to numeric value; handle None or non-numeric
+        try:
+            estimated_cost = float(estimated_cost) if estimated_cost is not None else 0.0
+        except (TypeError, ValueError):
+            estimated_cost = 0.0
         priority = state.get("risk_level", "high")  # Fire incidents are typically high priority
         
         resources_needed = []
@@ -72,7 +77,11 @@ def coordination_checkpoint_node(state: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         coordinator.close()
-        
+
+        # Ensure coordinator returned a dict
+        if coordination_result is None or not isinstance(coordination_result, dict):
+            coordination_result = {}
+
         state["coordination_check"] = coordination_result
         state["coordination_approved"] = coordination_result.get("should_proceed", True)
         state["coordination_recommendations"] = coordination_result.get("recommendations", [])

@@ -263,8 +263,15 @@ Choose risk level:
             llm_output_clean = llm_output_clean[:-3]
         
         # Parse JSON
-        result = json.loads(llm_output_clean.strip())
-        return result
+        parsed = json.loads(llm_output_clean.strip())
+        from ..schemas import IntentAnalysis
+
+        try:
+            validated = IntentAnalysis.parse_obj(parsed)
+            return validated.dict()
+        except Exception as e:
+            logger.warning(f"LLM intent JSON validation failed: {e}")
+            return parsed
         
     except json.JSONDecodeError as e:
         logger.warning(f"LLM returned invalid JSON: {e}")

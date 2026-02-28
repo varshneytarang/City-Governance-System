@@ -26,9 +26,12 @@ def policy_validator_node(state: DepartmentState) -> DepartmentState:
     
     try:
         intent = state.get("intent", "")
-        input_event = state.get("input_event", {})
-        observations = state.get("observations", {})
-        plan = state.get("plan", {})
+        input_event = state.get("input_event") or {}
+        observations = state.get("observations") or {}
+        # Ensure extracted_facts is a dict
+        if observations.get("extracted_facts") is None:
+            observations["extracted_facts"] = {}
+        plan = state.get("plan") or {}
         
         # Try LLM first (only if enabled)
         llm_client = get_llm_client()

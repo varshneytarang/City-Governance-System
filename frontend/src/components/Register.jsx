@@ -49,7 +49,8 @@ const Register = () => {
     setError('')
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1';
+      const API_URL = import.meta.env.VITE_API_URL
+        || (import.meta.env.MODE === 'development' ? 'http://localhost:8000/api/v1' : 'https://web-production-1febd.up.railway.app/api/v1');
       const res = await fetch(`${API_URL}/auth/google`, {
         method: 'POST',
         headers: {
@@ -150,7 +151,8 @@ const Register = () => {
 
       console.log('Sending registration payload:', payload)
 
-      const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1';
+      const API_URL = import.meta.env.VITE_API_URL
+        || (import.meta.env.MODE === 'development' ? 'http://localhost:8000/api/v1' : 'https://web-production-1febd.up.railway.app/api/v1');
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {

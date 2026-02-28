@@ -1,7 +1,10 @@
 import { useState } from 'react';
 
 const ApiTestPage = () => {
-  const [endpoint, setEndpoint] = useState(import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'https://web-production-1febd.up.railway.app');
+  const defaultEndpoint = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api/v1', '')
+    : (import.meta.env.MODE === 'development' ? 'http://localhost:8000' : 'https://web-production-1febd.up.railway.app');
+  const [endpoint, setEndpoint] = useState(defaultEndpoint);
   const [requestType, setRequestType] = useState('capacity_query');
   const [location, setLocation] = useState('Downtown');
   const [reason, setReason] = useState('Testing backend integration');

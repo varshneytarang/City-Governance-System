@@ -38,7 +38,7 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
         conversational_response = None
         
         if llm_client:
-            conversational_response = _generate_conversational_response(
+            conversational_response = _generate_conversational_response_v2(
                 llm_client, state, escalate, confidence, feasible, policy_ok, user_query
             )
         
@@ -102,16 +102,18 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
     return state
 
 
-def _generate_conversational_response(client, state: dict, escalate: bool, 
-                                     confidence: float, feasible: bool, 
-                                     policy_ok: bool, user_query: str) -> str:
-    """Generate a conversational, ChatGPT-like response using LLM"""
+def _generate_conversational_response_v2(client, state: dict, escalate: bool,
+                                         confidence: float, feasible: bool,
+                                         policy_ok: bool, user_query: str) -> str:
+    """Enhanced conversational response: dynamic system prompt + logging"""
     try:
+        # Build context from state
         tool_results = state.get("tool_results", {})
         observations = state.get("observations", {})
         plan = state.get("plan", {})
         risk_level = state.get("risk_level", "unknown")
-        
+
+        # Create comprehensive context
         context_parts = []
         if tool_results:
             context_parts.append(f"Tool Results: {json.dumps(tool_results, default=str)}")
@@ -119,46 +121,62 @@ def _generate_conversational_response(client, state: dict, escalate: bool,
             context_parts.append(f"Observations: {json.dumps(observations, default=str)}")
         if plan:
             context_parts.append(f"Plan: {json.dumps(plan, default=str)}")
-            
+
         context_text = "\n".join(context_parts) if context_parts else "No additional context available"
-        
+
         decision_status = "ESCALATION NEEDED" if escalate else "RECOMMENDATION"
-        
-        prompt = f"""You are a helpful Fire Department AI assistant. A user asked: "{user_query}"
 
-ANALYSIS RESULTS:
-- Decision: {decision_status}
-- Feasible: {feasible}
-- Policy Compliant: {policy_ok}
-- Confidence: {confidence:.0%}
-- Risk Level: {risk_level}
+        user_prompt = (
+            f"User Query: \"{user_query}\"\n\n"
+            f"ANALYSIS RESULTS:\n- Decision: {decision_status}\n- Feasible: {feasible}\n"
+            f"- Policy Compliant: {policy_ok}\n- Confidence: {confidence:.0%}\n- Risk Level: {risk_level}\n\n"
+            f"DETAILED CONTEXT:\n{context_text}\n\nRespond concisely and helpfully."
+        )
 
-DETAILED CONTEXT:
-{context_text}
+        # Generate dynamic system prompt via meta-prompting
+        dynamic_system_prompt = None
+        try:
+            logger.info("🔎 Generating dynamic system prompt for output generation")
+            meta_prompt = (
+                "Generate a concise system prompt (1-2 sentences) to instruct an assistant to reply to this user query in a "
+                f"professional, conversational tone. User query: {user_query}. Context summary: {context_text[:500]}"
+            )
+            sys_resp = client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert at creating system prompts for AI assistants. Produce a short, specific system prompt."},
+                    {"role": "user", "content": meta_prompt}
+                ],
+                temperature=0.5,
+                max_tokens=150,
+            )
+            dynamic_system_prompt = sys_resp.choices[0].message.content.strip()
+            if dynamic_system_prompt:
+                dynamic_system_prompt = dynamic_system_prompt.replace('`', '').strip()
+                logger.info(f"  🔐 Dynamic system prompt: {dynamic_system_prompt[:200]}")
+        except Exception as e:
+            logger.warning(f"Dynamic system prompt generation failed: {e}")
 
-Respond to the user's query in a natural, conversational way like ChatGPT would. 
-- Be helpful, informative, and friendly
-- Explain what you found in the database/analysis
-- Give specific details and numbers when available
-- If recommending action, explain why it's safe and feasible
-- If escalating, explain what concerns were found and why human review is needed
-- Write 2-4 paragraphs as a natural conversation
-- Don't just list bullet points - write flowing, natural sentences
+        # Fallback system prompt
+        system_prompt = dynamic_system_prompt or "You are a friendly, knowledgeable Fire Department AI assistant. Respond naturally and conversationally."
 
-Your response:"""
+        logger.info(f"  🔐 Using system prompt for response generation: {system_prompt}")
+        logger.info(f"  📝 User prompt (truncated): {user_prompt[:400]}")
 
         response = client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": "You are a friendly, knowledgeable Fire Department AI assistant. Respond naturally and conversationally."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
-            max_tokens=800
+            max_tokens=800,
         )
-        
-        return response.choices[0].message.content.strip()
-        
+
+        llm_response = response.choices[0].message.content.strip()
+        logger.info(f"✓ Generated conversational response ({len(llm_response)} chars); sample: {llm_response[:200]}")
+        return llm_response
+
     except Exception as e:
         logger.error(f"✗ LLM response generation failed: {e}")
         return None

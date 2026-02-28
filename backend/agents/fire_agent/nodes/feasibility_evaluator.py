@@ -29,8 +29,22 @@ def feasibility_evaluator_node(state: DepartmentState) -> DepartmentState:
     
     try:
         intent = state.get("intent", "")
-        observations = state.get("observations", {})
-        input_event = state.get("input_event", {})
+        observations = state.get("observations") or {}
+        # Normalize extracted_facts to a dict and sanitize numeric fields
+        extracted = observations.get("extracted_facts") or {}
+        # Coerce None/Decimal values to safe numeric types for rules
+        from decimal import Decimal
+        for k, v in list(extracted.items()):
+            if v is None:
+                # numeric defaults: 0, boolean defaults: False
+                extracted[k] = 0
+            elif isinstance(v, Decimal):
+                try:
+                    extracted[k] = float(v)
+                except Exception:
+                    extracted[k] = 0
+        observations["extracted_facts"] = extracted
+        input_event = state.get("input_event") or {}
         attempts = state.get("attempts", 0)
         max_attempts = state.get("max_attempts", 3)
         

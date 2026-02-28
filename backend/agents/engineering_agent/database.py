@@ -8,6 +8,7 @@ import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date
 import logging
+from decimal import Decimal
 
 from .config import settings
 
@@ -196,7 +197,7 @@ class EngineeringDepartmentQueries:
             WHERE department = 'engineering'
                   AND reported_at >= CURRENT_DATE - INTERVAL '%s days'
         """
-        params = [days_back]
+        params = [f"{days_back} days"]
         
         if severity:
             query += " AND severity = %s"
@@ -216,7 +217,8 @@ class EngineeringDepartmentQueries:
                   AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '%s days'
             ORDER BY scheduled_date ASC, start_time ASC
         """
-        return self.db.execute_query(query, (location, days_ahead))
+        # Pass interval literal for Postgres (e.g. '7 days')
+        return self.db.execute_query(query, (location, f"{days_ahead} days"))
     
     def get_safety_violations(self, days_back: int = 90) -> List[Dict]:
         """Get recent safety violations"""
@@ -229,12 +231,33 @@ class EngineeringDepartmentQueries:
                   AND reported_at >= CURRENT_DATE - INTERVAL '%s days'
             ORDER BY reported_at DESC
         """
-        return self.db.execute_query(query, (days_back,))
+        return self.db.execute_query(query, (f"{days_back} days",))
     
     # ========== DECISION LOGGING ==========
     
     def log_decision(self, decision_data: Dict[str, Any]) -> Optional[str]:
         """Log agent decision to database"""
+        # Helper: sanitize objects for JSON serialization (dates, decimals)
+        def _sanitize(obj):
+            if obj is None:
+                return None
+            if isinstance(obj, (str, int, float, bool)):
+                return obj
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            if isinstance(obj, Decimal):
+                try:
+                    return float(obj)
+                except Exception:
+                    return str(obj)
+            if isinstance(obj, dict):
+                return {k: _sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
+            try:
+                return str(obj)
+            except Exception:
+                return None
         query = """
             INSERT INTO agent_decisions (
                 department, request_type, request_data, context_snapshot,
@@ -250,14 +273,14 @@ class EngineeringDepartmentQueries:
         params = (
             "engineering",
             decision_data.get("request_type", "unknown"),
-            json.dumps(decision_data.get("request_data", {})),
-            json.dumps(decision_data.get("context", {})),
-            json.dumps(decision_data.get("plan", {})),
-            json.dumps(decision_data.get("tool_results", {})),
+            json.dumps(_sanitize(decision_data.get("request_data", {}))),
+            json.dumps(_sanitize(decision_data.get("context", {}))),
+            json.dumps(_sanitize(decision_data.get("plan", {}))),
+            json.dumps(_sanitize(decision_data.get("tool_results", {}))),
             decision_data.get("feasible", False),
             decision_data.get("feasibility_reason", ""),
             decision_data.get("policy_ok", False),
-            json.dumps(decision_data.get("policy_violations", [])),
+            json.dumps(_sanitize(decision_data.get("policy_violations", []))),
             decision_data.get("confidence", 0.0),
             decision_data.get("decision", "escalate"),
             decision_data.get("reasoning", ""),

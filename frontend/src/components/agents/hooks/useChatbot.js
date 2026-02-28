@@ -17,7 +17,8 @@ const useChatbot = (agentType) => {
   
   const pollingIntervalRef = useRef(null)
   const analyticsRef = useRef(null)
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-1febd.up.railway.app/api/v1'
+  const API_BASE_URL = import.meta.env.VITE_API_URL
+    || (import.meta.env.MODE === 'development' ? 'http://localhost:8000/api/v1' : 'https://web-production-1febd.up.railway.app/api/v1')
   const MAX_RETRIES = 3
 
   // Initialize analytics

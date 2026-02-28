@@ -29,16 +29,17 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
         feasible = state.get("feasible", False)
         policy_ok = state.get("policy_ok", False)
         
-        # Get user's original query
-        original_request = state.get("request", {})
-        user_query = original_request.get("reason", "User inquiry about engineering operations")
+        # Get user's original query (use input_event for consistency)
+        original_request = state.get("input_event", {})
+        user_query = original_request.get("reason") or original_request.get("query") or "User inquiry about engineering operations"
         
         # Try to generate conversational response with LLM
         llm_client = get_llm_client()
         conversational_response = None
         
         if llm_client:
-            conversational_response = _generate_conversational_response(
+            # Prefer enhanced dynamic system-prompt flow
+            conversational_response = _generate_conversational_response_v2(
                 llm_client, state, escalate, confidence, feasible, policy_ok, user_query
             )
         
@@ -161,5 +162,82 @@ Your response:"""
         
     except Exception as e:
         logger.error(f"LLM response generation failed: {e}")
+        return None
+
+
+def _generate_conversational_response_v2(client, state: dict, escalate: bool,
+                                         confidence: float, feasible: bool,
+                                         policy_ok: bool, user_query: str) -> str:
+    """Dynamic system prompt + LLM conversational output (shared pattern)."""
+    try:
+        tool_results = state.get("tool_results", {})
+        observations = state.get("observations", {})
+        plan = state.get("plan", {})
+        risk_level = state.get("risk_level", "unknown")
+
+        context_parts = []
+        if tool_results:
+            context_parts.append(f"Tool Results: {json.dumps(tool_results, default=str)}")
+        if observations:
+            context_parts.append(f"Observations: {json.dumps(observations, default=str)}")
+        if plan:
+            context_parts.append(f"Plan: {json.dumps(plan, default=str)}")
+
+        context_text = "\n".join(context_parts) if context_parts else "No additional context available"
+        decision_status = "ESCALATION NEEDED" if escalate else "RECOMMENDATION"
+
+        # Inject budget context if available
+        budget_total = None
+        if isinstance(state.get("context", {}).get("budget"), dict):
+            budget_total = state.get("context", {}).get("budget", {}).get("total")
+        if budget_total is not None and "budget" not in context_text:
+            context_text = f"Budget Total: {budget_total}\n" + context_text
+
+        user_prompt = (
+            f"User Query: \"{user_query}\"\n\n"
+            f"ANALYSIS RESULTS:\n- Decision: {decision_status}\n- Feasible: {feasible}\n"
+            f"- Policy Compliant: {policy_ok}\n- Confidence: {confidence:.0%}\n- Risk Level: {risk_level}\n\n"
+            f"DETAILED CONTEXT:\n{context_text}\n\nRespond concisely and helpfully."
+        )
+
+        # Meta-prompt to generate a focused system prompt
+        dynamic_system_prompt = None
+        try:
+            meta_prompt = (
+                "Generate a 1-2 sentence system prompt instructing an assistant to reply concisely and professionally to the user query. "
+                f"User query: {user_query}. Context: {context_text[:500]}"
+            )
+            sys_resp = client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert at producing concise system prompts for AI assistants."},
+                    {"role": "user", "content": meta_prompt}
+                ],
+                temperature=0.5,
+                max_tokens=120,
+            )
+            dynamic_system_prompt = sys_resp.choices[0].message.content.strip()
+            if dynamic_system_prompt:
+                dynamic_system_prompt = dynamic_system_prompt.replace('`', '').strip()
+        except Exception as e:
+            logger.warning(f"Dynamic system prompt generation failed: {e}")
+
+        system_prompt = dynamic_system_prompt or "You are a friendly, knowledgeable Engineering Department AI assistant. Reply concisely and helpfully."
+
+        response = client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=800,
+        )
+
+        llm_response = response.choices[0].message.content.strip()
+        return llm_response
+
+    except Exception as e:
+        logger.error(f"LLM v2 generation failed: {e}")
         return None
 

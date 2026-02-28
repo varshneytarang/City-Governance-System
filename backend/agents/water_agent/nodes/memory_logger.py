@@ -32,6 +32,30 @@ def memory_logger_node(state: DepartmentState, queries: WaterDepartmentQueries) 
     
     logger.info("💾 [NODE: Memory Logger]")
     
+    def _sanitize(obj):
+        """Recursively convert non-JSON types (date/datetime) to strings."""
+        from datetime import date, datetime
+        from decimal import Decimal
+
+        if isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            try:
+                return float(obj)
+            except Exception:
+                return str(obj)
+        if isinstance(obj, dict):
+            return {k: _sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_sanitize(v) for v in obj]
+        # Fallback to string
+        try:
+            return str(obj)
+        except Exception:
+            return None
+
     try:
         # Build decision record
         decision_record = {
@@ -53,8 +77,11 @@ def memory_logger_node(state: DepartmentState, queries: WaterDepartmentQueries) 
             "execution_time_ms": state.get("execution_time_ms", 0)
         }
         
+        # Sanitize record for JSON serialization
+        decision_record_sanitized = _sanitize(decision_record)
+
         # Log to database
-        decision_id = queries.log_decision(decision_record)
+        decision_id = queries.log_decision(decision_record_sanitized)
         
         state["decision_id"] = decision_id
         

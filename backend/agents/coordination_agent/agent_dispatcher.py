@@ -104,7 +104,12 @@ class AgentDispatcher:
             })
         """
         logger.info(f"🔄 Coordination → {agent_type.upper()} Agent")
-        logger.info(f"   Request: {request.get('type', 'unknown')}")
+        logger.info(f"   Request Type: {request.get('type', 'unknown')}")
+        try:
+            import json
+            logger.info(f"   Request payload (truncated): {json.dumps(request, default=str)[:800]}")
+        except Exception:
+            logger.info(f"   Request payload: {request}")
         
         try:
             # Get agent instance

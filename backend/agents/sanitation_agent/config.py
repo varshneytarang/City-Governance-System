@@ -4,6 +4,11 @@ Configuration for Sanitation Department Agent
 
 from pydantic_settings import BaseSettings
 from typing import Optional
+try:
+    import global_config
+    _global_llm = getattr(global_config, "global_llm_settings", None)
+except Exception:
+    _global_llm = None
 
 
 class Settings(BaseSettings):
@@ -17,11 +22,12 @@ class Settings(BaseSettings):
     DB_PASSWORD: Optional[str] = None
     
     # LLM
-    LLM_PROVIDER: str = "openai"  # openai, groq, or local
-    OPENAI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
-    LLM_MODEL: str = "gpt-4"
-    LLM_TEMPERATURE: float = 0.3
+    # Prefer global LLM settings when available (so all agents use same provider/keys)
+    LLM_PROVIDER: str = _global_llm.LLM_PROVIDER if _global_llm else "openai"
+    OPENAI_API_KEY: Optional[str] = _global_llm.OPENAI_API_KEY if _global_llm else None
+    GROQ_API_KEY: Optional[str] = _global_llm.GROQ_API_KEY if _global_llm else None
+    LLM_MODEL: str = _global_llm.LLM_MODEL if _global_llm else "gpt-4"
+    LLM_TEMPERATURE: float = _global_llm.LLM_TEMPERATURE if _global_llm else 0.3
     
     # LLM Usage Control (to reduce API calls)
     USE_LLM_FOR_PLANNER: bool = True

@@ -120,10 +120,11 @@ class WaterDepartmentQueries:
             FROM work_schedules
             WHERE department = 'water' 
                   AND location = %s
-                  AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '%s days'
+                  AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL %s
             ORDER BY scheduled_date ASC, start_time ASC
         """
-        return self.db.execute_query(query, (location, days_ahead))
+        # Postgres expects interval literal like '7 days'
+        return self.db.execute_query(query, (location, f"{days_ahead} days"))
     
     def get_available_workers(self, location: Optional[str] = None, role: Optional[str] = None) -> List[Dict]:
         """Get available workers"""
@@ -182,9 +183,9 @@ class WaterDepartmentQueries:
                    reported_date, status, description
             FROM incidents
             WHERE department = 'water'
-                  AND reported_date > CURRENT_TIMESTAMP - INTERVAL '%s days'
+                  AND reported_date > CURRENT_TIMESTAMP - INTERVAL %s
         """
-        params = [days]
+        params = [f"{days} days"]
         
         if location:
             query += " AND location = %s"
@@ -320,9 +321,9 @@ class WaterDepartmentQueries:
                    p.location, p.zone, p.pipeline_type, p.condition
             FROM pipeline_inspections pi
             JOIN pipelines p ON pi.pipeline_id = p.pipeline_id
-            WHERE pi.inspection_date > CURRENT_DATE - INTERVAL '%s days'
+            WHERE pi.inspection_date > CURRENT_DATE - INTERVAL %s
         """
-        params = [days]
+        params = [f"{days} days"]
         
         if pipeline_id:
             query += " AND pi.pipeline_id = %s"
@@ -339,9 +340,9 @@ class WaterDepartmentQueries:
                    p.zone, p.pipeline_type
             FROM water_readings wr
             LEFT JOIN pipelines p ON wr.pipeline_id = p.pipeline_id
-            WHERE wr.reading_time > CURRENT_TIMESTAMP - INTERVAL '%s hours'
+            WHERE wr.reading_time > CURRENT_TIMESTAMP - INTERVAL %s
         """
-        params = [hours]
+        params = [f"{hours} hours"]
         
         if location:
             query += " AND wr.location = %s"

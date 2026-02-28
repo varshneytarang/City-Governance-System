@@ -44,6 +44,11 @@ def coordination_checkpoint_node(state: Dict[str, Any]) -> Dict[str, Any]:
         
         location = input_event.get("location", input_event.get("zone", "Unknown"))
         estimated_cost = input_event.get("estimated_cost", 0)
+        # Normalize estimated_cost to numeric value; handle None or non-numeric
+        try:
+            estimated_cost = float(estimated_cost) if estimated_cost is not None else 0.0
+        except (TypeError, ValueError):
+            estimated_cost = 0.0
         priority = state.get("risk_level", "medium")
         
         resources_needed = []

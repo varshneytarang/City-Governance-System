@@ -17,12 +17,21 @@ def budget_feasibility_node(state: Dict) -> Dict:
 
     # Basic budget check via tools
     budget_check = tools.check_budget_availability(total)
-    state["fiscal_feasible"] = budget_check.get("can_afford", False)
+    # Set canonical keys used across agents
+    state["feasible"] = budget_check.get("can_afford", False)
+    state["fiscal_feasible"] = state["feasible"]
     state["fiscal_impact"] = {
         "total_budget": budget_check.get("total_budget"),
         "remaining": budget_check.get("remaining"),
         "estimated_cost": total,
     }
+    # Provide a short feasibility reason and confidence
+    if state["feasible"]:
+        state["feasibility_reason"] = "Sufficient budget available"
+        state["confidence"] = state.get("confidence", 0.8)
+    else:
+        state["feasibility_reason"] = "Insufficient budget"
+        state["confidence"] = state.get("confidence", 0.3)
 
     # Use LLM for advanced suggestions if available
     client = get_llm_client()
@@ -50,10 +59,16 @@ def budget_feasibility_node(state: Dict) -> Dict:
 
             parsed = json.loads(llm_text)
             # Merge results
-            state["fiscal_feasible"] = bool(parsed.get("can_afford", state.get("fiscal_feasible", False)))
+            state["feasible"] = bool(parsed.get("can_afford", state.get("feasible", False)))
+            state["fiscal_feasible"] = state["feasible"]
             recs = parsed.get("recommendations", []) or []
             state["recommendations"] = recs
             state["fiscal_reasoning"] = parsed.get("reasoning")
+            # If LLM returns a confidence field, use it
+            try:
+                state["confidence"] = float(parsed.get("confidence", state.get("confidence", 0.5)))
+            except Exception:
+                pass
             return state
 
         except Exception as e:

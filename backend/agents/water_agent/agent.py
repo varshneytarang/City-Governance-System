@@ -37,7 +37,7 @@ from .nodes import (
 )
 
 logger = logging.getLogger(__name__)
-
+logger.info("✓ Water Department Agent module loaded")
 
 class WaterDepartmentAgent:
     """
@@ -241,6 +241,7 @@ class WaterDepartmentAgent:
             # Initialize state
             initial_state: DepartmentState = {
                 "input_event": request,
+                "tools": self.tools,
                 "context": {},
                 "intent": "",
                 "risk_level": "low",
@@ -276,6 +277,20 @@ class WaterDepartmentAgent:
             # Run graph
             logger.info(f"📋 Request type: {request.get('type')}")
             logger.info(f"📍 Location: {request.get('location', 'N/A')}")
+            # Log the full incoming request for observability (truncated)
+            try:
+                import json
+                req_sample = json.dumps(request, default=str)
+                logger.info(f"❓ Incoming request payload: {req_sample[:800]}")
+            except Exception:
+                logger.info(f"❓ Incoming request (raw): {request}")
+
+            # Log available tools
+            try:
+                tool_methods = [m for m in dir(self.tools) if callable(getattr(self.tools, m)) and not m.startswith('_')]
+                logger.info(f"🧰 Available tools: {tool_methods}")
+            except Exception:
+                logger.info("🧰 Could not list tools")
             
             result_state = self.graph.invoke(initial_state)
             

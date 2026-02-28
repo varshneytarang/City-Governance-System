@@ -159,10 +159,100 @@ class SanitationPlanner:
             # Parse JSON
             parsed = json.loads(llm_output.strip())
             plans = parsed.get("plans", [])
+
+            # Normalize steps to exact tool IDs so tool_executor can execute them
+            allowed_tools = [
+                "check_truck_availability",
+                "check_route_capacity",
+                "check_landfill_capacity",
+                "assess_collection_delay",
+                "check_equipment_status",
+                "get_complaint_history",
+                "check_recycling_center_availability",
+                "estimate_waste_volume",
+                "check_budget_availability",
+                "alert_all_workers",
+                "activate_emergency_protocol",
+                "document_request",
+                "log_decision"
+            ]
+
+            def _normalize_steps(steps):
+                if not isinstance(steps, list):
+                    return []
+                normalized = []
+                for s in steps:
+                    if not isinstance(s, str):
+                        continue
+                    s_clean = s.strip().lower()
+                    # If already an allowed tool id, accept
+                    if s in allowed_tools:
+                        normalized.append(s)
+                        continue
+                    # Map common natural language fragments to tool ids
+                    if any(k in s_clean for k in ["truck", "crew", "driver", "vehicle"]):
+                        normalized.append("check_truck_availability")
+                        continue
+                    if any(k in s_clean for k in ["route", "capacity", "workload"]):
+                        normalized.append("check_route_capacity")
+                        continue
+                    if any(k in s_clean for k in ["landfill", "dump", "tip"]):
+                        normalized.append("check_landfill_capacity")
+                        continue
+                    if any(k in s_clean for k in ["delay", "late", "collection delay"]):
+                        normalized.append("assess_collection_delay")
+                        continue
+                    if any(k in s_clean for k in ["equipment", "compactor", "maintenance"]):
+                        normalized.append("check_equipment_status")
+                        continue
+                    if any(k in s_clean for k in ["complaint", "complain", "report"]):
+                        normalized.append("get_complaint_history")
+                        continue
+                    if any(k in s_clean for k in ["recycling", "center"]):
+                        normalized.append("check_recycling_center_availability")
+                        continue
+                    if any(k in s_clean for k in ["estimate", "waste volume", "volume"]):
+                        normalized.append("estimate_waste_volume")
+                        continue
+                    if any(k in s_clean for k in ["budget", "cost", "fund"]):
+                        normalized.append("check_budget_availability")
+                        continue
+                    if any(k in s_clean for k in ["alert", "notify", "broadcast"]):
+                        normalized.append("alert_all_workers")
+                        continue
+                    if any(k in s_clean for k in ["emergency", "activate protocol"]):
+                        normalized.append("activate_emergency_protocol")
+                        continue
+                    if any(k in s_clean for k in ["document", "record", "note"]):
+                        normalized.append("document_request")
+                        continue
+                    # unknown -> skip
+                # Deduplicate while preserving order
+                seen = set()
+                deduped = []
+                for item in normalized:
+                    if item not in seen:
+                        seen.add(item)
+                        deduped.append(item)
+                return deduped
+
+            for plan in plans:
+                plan_steps = plan.get("steps") or []
+                plan["steps"] = _normalize_steps(plan_steps)
             
-            if not plans:
-                logger.warning("LLM returned no plans, using fallback")
+            # If after normalization there are no executable steps, fall back
+            executable_plans = []
+            for p in plans:
+                if p.get("steps"):
+                    executable_plans.append(p)
+                else:
+                    logger.warning(f"Plan '{p.get('name')}' has no executable steps after normalization; skipping")
+
+            if not executable_plans:
+                logger.warning("LLM returned no executable plans, using fallback")
                 return self._generate_deterministic_plans(intent, goal, context, input_event)
+
+            return executable_plans
             
             return plans
         

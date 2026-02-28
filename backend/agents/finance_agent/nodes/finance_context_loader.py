@@ -24,7 +24,15 @@ def finance_context_loader(state: Dict) -> Dict:
     queries = state.get("queries")
     if queries:
         try:
-            db_ctx = queries.fetch_budget_context(location=state.get("input_event", {}).get("location"))
+            # Prefer a fetch_budget_context helper if available
+            if hasattr(queries, "fetch_budget_context"):
+                db_ctx = queries.fetch_budget_context(location=state.get("input_event", {}).get("location"))
+            else:
+                # Fallback to get_department_budgets and summarize
+                dept = state.get("input_event", {}).get("requesting_department") or state.get("input_event", {}).get("department")
+                budgets = queries.get_department_budgets(department=dept)
+                db_ctx = budgets[0] if budgets and len(budgets) > 0 else None
+
             if db_ctx:
                 state_context["budget_total"] = float(db_ctx.get("total_budget", state_context["budget_total"]))
                 state_context["budget_summary"] = db_ctx

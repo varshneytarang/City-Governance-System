@@ -29,18 +29,27 @@ def output_generator_node(state: DepartmentState) -> DepartmentState:
         feasible = state.get("feasible", False)
         policy_ok = state.get("policy_ok", False)
         
-        # Get user's original query
-        original_request = state.get("request", {})
-        user_query = original_request.get("reason", "User inquiry about finance operations")
+        # Get user's original query (finance agent stores it under `input_event`)
+        original_request = state.get("input_event", {})
+        user_query = original_request.get("reason") or original_request.get("query") or "User inquiry about finance operations"
         
-        # Try to generate conversational response with LLM
-        llm_client = get_llm_client()
+        # Prefer deterministic concise reply for budget queries when we have a budget_total
         conversational_response = None
-        
-        if llm_client:
-            conversational_response = _generate_conversational_response(
-                llm_client, state, escalate, confidence, feasible, policy_ok, user_query
-            )
+        budget_total = state.get("context", {}).get("budget_total")
+        if budget_total is not None and ("budget" in user_query.lower() or "available" in user_query.lower()):
+            try:
+                conversational_response = f"The total budget available is ${float(budget_total):,.2f}."
+                logger.info("  → Using deterministic concise budget response (no LLM)")
+            except Exception:
+                conversational_response = None
+
+        # Otherwise, fall back to LLM-generated response
+        if conversational_response is None:
+            llm_client = get_llm_client()
+            if llm_client:
+                conversational_response = _generate_conversational_response_v2(
+                    llm_client, state, escalate, confidence, feasible, policy_ok, user_query
+                )
         
         response = {}
         
@@ -161,5 +170,90 @@ Your response:"""
         
     except Exception as e:
         logger.error(f"LLM response generation failed: {e}")
+        return None
+
+
+def _generate_conversational_response_v2(client, state: dict, escalate: bool,
+                                         confidence: float, feasible: bool,
+                                         policy_ok: bool, user_query: str) -> str:
+    """Enhanced conversational response: dynamic system prompt + logging"""
+    try:
+        # Build context from state
+        tool_results = state.get("tool_results", {})
+        observations = state.get("observations", {})
+        plan = state.get("plan", {})
+        risk_level = state.get("risk_level", "unknown")
+
+        # Create comprehensive context
+        context_parts = []
+        if tool_results:
+            context_parts.append(f"Tool Results: {json.dumps(tool_results, default=str)}")
+        if observations:
+            context_parts.append(f"Observations: {json.dumps(observations, default=str)}")
+        if plan:
+            context_parts.append(f"Plan: {json.dumps(plan, default=str)}")
+
+        context_text = "\n".join(context_parts) if context_parts else "No additional context available"
+
+        decision_status = "ESCALATION NEEDED" if escalate else "RECOMMENDATION"
+
+        # Add budget context if available to improve LLM responses
+        budget_total = state.get("context", {}).get("budget_total")
+        if budget_total is not None and "budget_total" not in context_text:
+            context_text = f"Budget Total: {budget_total}\n" + context_text
+
+        user_prompt = (
+            f"User Query: \"{user_query}\"\n\n"
+            f"ANALYSIS RESULTS:\n- Decision: {decision_status}\n- Feasible: {feasible}\n"
+            f"- Policy Compliant: {policy_ok}\n- Confidence: {confidence:.0%}\n- Risk Level: {risk_level}\n\n"
+            f"DETAILED CONTEXT:\n{context_text}\n\nRespond concisely and helpfully."
+        )
+
+        # Generate dynamic system prompt via meta-prompting
+        dynamic_system_prompt = None
+        try:
+            logger.info("🔎 Generating dynamic system prompt for output generation")
+            meta_prompt = (
+                "Generate a concise system prompt (1-2 sentences) to instruct an assistant to reply to this user query in a "
+                f"professional, conversational tone. User query: {user_query}. Context summary: {context_text[:500]}"
+            )
+            sys_resp = client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert at creating system prompts for AI assistants. Produce a short, specific system prompt."},
+                    {"role": "user", "content": meta_prompt}
+                ],
+                temperature=0.5,
+                max_tokens=150,
+            )
+            dynamic_system_prompt = sys_resp.choices[0].message.content.strip()
+            if dynamic_system_prompt:
+                dynamic_system_prompt = dynamic_system_prompt.replace('`', '').strip()
+                logger.info(f"  🔐 Dynamic system prompt: {dynamic_system_prompt[:200]}")
+        except Exception as e:
+            logger.warning(f"Dynamic system prompt generation failed: {e}")
+
+        # Fallback system prompt
+        system_prompt = dynamic_system_prompt or "You are a friendly, knowledgeable Finance Department AI assistant. Respond naturally and conversationally."
+
+        logger.info(f"  🔐 Using system prompt for response generation: {system_prompt}")
+        logger.info(f"  📝 User prompt (truncated): {user_prompt[:400]}")
+
+        response = client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=800,
+        )
+
+        llm_response = response.choices[0].message.content.strip()
+        logger.info(f"✓ Generated conversational response ({len(llm_response)} chars); sample: {llm_response[:200]}")
+        return llm_response
+
+    except Exception as e:
+        logger.error(f"✗ LLM response generation failed: {e}")
         return None
 

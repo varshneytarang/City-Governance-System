@@ -17,8 +17,8 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 
-class WaterPlanner:
-    """LLM-based planner for Water Department"""
+class EngineeringPlanner:
+    """LLM-based planner for Engineering Department"""
     
     def __init__(self):
         """Initialize planner with LLM support"""
@@ -159,12 +159,91 @@ class WaterPlanner:
             # Parse JSON
             parsed = json.loads(llm_output.strip())
             plans = parsed.get("plans", [])
-            
-            if not plans:
-                logger.warning("LLM returned no plans, using fallback")
+
+            # Normalize steps to known tool IDs
+            allowed_tools = [
+                "document_request",
+                "check_active_projects",
+                "check_contractor_availability",
+                "check_equipment_availability",
+                "check_budget_availability",
+                "check_tender_requirements",
+                "check_monsoon_restrictions",
+                "check_safety_compliance",
+                "check_schedule_conflicts",
+                "check_recent_incidents",
+                "log_decision",
+                "activate_emergency_protocol",
+                "alert_all_workers",
+                "check_tender_requirements"
+            ]
+
+            def _normalize_steps(steps):
+                if not isinstance(steps, list):
+                    return []
+                normalized = []
+                for s in steps:
+                    if not isinstance(s, str):
+                        continue
+                    s_clean = s.strip().lower()
+                    if s in allowed_tools:
+                        normalized.append(s)
+                        continue
+                    # map common language to tool ids
+                    if any(k in s_clean for k in ["project", "active project", "ongoing project"]):
+                        normalized.append("check_active_projects")
+                        continue
+                    if any(k in s_clean for k in ["contractor", "contractors", "bidder"]):
+                        normalized.append("check_contractor_availability")
+                        continue
+                    if any(k in s_clean for k in ["equipment", "machinery", "crane", "bulldozer"]):
+                        normalized.append("check_equipment_availability")
+                        continue
+                    if any(k in s_clean for k in ["budget", "cost", "fund"]):
+                        normalized.append("check_budget_availability")
+                        continue
+                    if any(k in s_clean for k in ["tender", "procure", "procurement"]):
+                        normalized.append("check_tender_requirements")
+                        continue
+                    if any(k in s_clean for k in ["monsoon", "rain", "season"]):
+                        normalized.append("check_monsoon_restrictions")
+                        continue
+                    if any(k in s_clean for k in ["safety", "violation", "compliance"]):
+                        normalized.append("check_safety_compliance")
+                        continue
+                    if any(k in s_clean for k in ["schedule", "conflict", "date"]):
+                        normalized.append("check_schedule_conflicts")
+                        continue
+                    if any(k in s_clean for k in ["incident", "accident", "incident history"]):
+                        normalized.append("check_recent_incidents")
+                        continue
+                    if any(k in s_clean for k in ["alert", "notify", "broadcast"]):
+                        normalized.append("alert_all_workers")
+                        continue
+                # dedupe preserving order
+                seen = set()
+                deduped = []
+                for it in normalized:
+                    if it not in seen:
+                        seen.add(it)
+                        deduped.append(it)
+                return deduped
+
+            # normalize each plan's steps
+            executable_plans = []
+            for p in plans:
+                steps = p.get("steps", [])
+                p["steps"] = _normalize_steps(steps)
+                if p["steps"]:
+                    executable_plans.append(p)
+                else:
+                    logger.warning(f"Plan '{p.get('name')}' has no executable steps after normalization; skipping")
+
+            if not executable_plans:
+                logger.warning("LLM returned no executable plans, using fallback")
                 return self._generate_deterministic_plans(intent, goal, context, input_event)
-            
-            return plans
+
+            return executable_plans
         
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM JSON: {e}")
@@ -336,7 +415,7 @@ Return ONLY valid JSON using EXACT tool names from above:
 def planner_node(state: EngineeringState) -> EngineeringState:
     """Planner node that generates plans"""
     
-    planner = WaterPlanner()
+    planner = EngineeringPlanner()
     plan_result = planner.generate_plan(state)
     
     state["plan"] = plan_result.get("primary_plan", {})

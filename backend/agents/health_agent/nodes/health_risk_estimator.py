@@ -21,10 +21,26 @@ def _vulnerability_index(vulnerable_entries):
     if not vulnerable_entries:
         return 0.0
     # average vulnerability_index when present
-    vals = [e.get('vulnerability_index', 0) for e in vulnerable_entries if e.get('vulnerability_index') is not None]
+    vals = []
+    for e in vulnerable_entries:
+        v = e.get('vulnerability_index', None)
+        if v is None:
+            continue
+        try:
+            # Handle Decimal, str, int, float safely
+            v_f = float(v)
+        except Exception:
+            try:
+                v_f = float(str(v))
+            except Exception:
+                v_f = 0.0
+        vals.append(v_f)
+
     if not vals:
         return 0.0
-    return min(1.0, sum(vals) / len(vals) / 10.0)
+
+    avg = sum(vals) / len(vals)
+    return min(1.0, avg / 10.0)
 
 
 def health_risk_estimator(state: Dict) -> Dict:
