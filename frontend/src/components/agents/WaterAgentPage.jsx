@@ -7,6 +7,7 @@ import {
   BarChart3, TrendingDown, Zap, Shield, ArrowUp, ArrowDown, Radio
 } from 'lucide-react'
 import AgentChatBot from './AgentChatBot'
+import TaskOrchestrationDashboard from '../TaskOrchestrationDashboard'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
@@ -611,6 +612,16 @@ const WaterAgentPage = () => {
               <CircularGauge value={91} label="Optimization" color="#8B5CF6" />
               <CircularGauge value={78} label="Tank Levels" color="#FF9F1C" />
             </div>
+          </motion.div>
+
+          {/* Task Orchestration Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85 }}
+            className="mb-8"
+          >
+            <TaskOrchestrationDashboard department="water" />
           </motion.div>
           {/* Enhanced Zone Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

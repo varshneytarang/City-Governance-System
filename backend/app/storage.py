@@ -47,6 +47,14 @@ def init_db():
         """
     )
 
+    # Migration: Add summary column if it doesn't exist
+    try:
+        cur.execute("SELECT summary FROM agent_decisions LIMIT 1")
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        cur.execute("ALTER TABLE agent_decisions ADD COLUMN summary TEXT")
+        conn.commit()
+
     conn.commit()
     conn.close()
 

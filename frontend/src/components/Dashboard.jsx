@@ -584,7 +584,7 @@ const Dashboard = ({ reducedMotion = false }) => {
       </div>
 
       {/* Custom Scrollbar Styles */}
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }

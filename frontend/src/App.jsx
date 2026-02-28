@@ -5,6 +5,8 @@ import PageLoader from './components/PageLoader'
 // Import page components
 import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
+import TaskOrchestrationDashboard from './components/TaskOrchestrationDashboard'
+import NotificationPanel from './components/NotificationPanel'
 import TestPage from './pages/TestPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'

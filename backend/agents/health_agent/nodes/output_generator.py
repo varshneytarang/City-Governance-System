@@ -150,7 +150,15 @@ Your response:"""
         response = client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": "You are a friendly, knowledgeable Health Department AI assistant. Respond naturally and conversationally."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a friendly, knowledgeable Health Department AI assistant. "
+                        "Respond naturally and conversationally, like you're chatting with "
+                        "someone who needs help. Be informative but approachable, and focus "
+                        "on public health impact and community wellbeing."
+                    )
+                },
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,

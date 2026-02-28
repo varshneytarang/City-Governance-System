@@ -7,6 +7,16 @@ through the Coordination Agent to the appropriate department agent.
 
 import os
 import sys
+import logging
+
+# Configure logging FIRST to capture all agent logs
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 # Add backend directory to path for imports
 backend_dir = os.path.dirname(os.path.abspath(__file__))

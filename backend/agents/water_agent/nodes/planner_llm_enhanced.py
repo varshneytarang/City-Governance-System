@@ -21,16 +21,27 @@ class WaterPlannerWithLLM:
     
     def __init__(self):
         """Initialize planner with LLM client"""
+        print("="*60)
+        print("🛠️ WATER PLANNER INITIALIZATION")
+        print("="*60)
         self.llm_provider = settings.LLM_PROVIDER
+        print(f"📌 LLM Provider: {self.llm_provider}")
+        print(f"📌 LLM Model: {settings.LLM_MODEL}")
+        print(f"📌 Temperature: {settings.LLM_TEMPERATURE}")
+        
         self.use_llm = self._check_llm_available()
+        print(f"📌 Will use LLM: {self.use_llm}")
         
         if self.use_llm:
             self._init_llm_client()
+        else:
+            print("⚠️  Using DETERMINISTIC FALLBACK mode")
+        print("="*60)
     
     def _check_llm_available(self) -> bool:
         """Check if LLM is configured"""
         openai_key = os.getenv("OPENAI_API_KEY") or settings.OPENAI_API_KEY
-        groq_key = os.getenv("GROQ_API_KEY")
+        groq_key = os.getenv("GROQ_API_KEY") or settings.GROQ_API_KEY
         
         if self.llm_provider == "openai" and openai_key:
             logger.info("✓ OpenAI LLM configured")
@@ -40,6 +51,9 @@ class WaterPlannerWithLLM:
             return True
         else:
             logger.warning("⚠️  No LLM configured, using deterministic fallback")
+            logger.warning(f"   Provider: {self.llm_provider}")
+            logger.warning(f"   GROQ_API_KEY from env: {'Set' if os.getenv('GROQ_API_KEY') else 'Not set'}")
+            logger.warning(f"   GROQ_API_KEY from settings: {'Set' if settings.GROQ_API_KEY else 'Not set'}")
             return False
     
     def _init_llm_client(self):
@@ -48,16 +62,17 @@ class WaterPlannerWithLLM:
             if self.llm_provider == "groq":
                 # Groq uses OpenAI-compatible API
                 import openai
+                groq_key = os.getenv("GROQ_API_KEY") or settings.GROQ_API_KEY
                 self.client = openai.OpenAI(
-                    api_key=os.getenv("GROQ_API_KEY"),
+                    api_key=groq_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
                 logger.info("✓ Groq client initialized")
             else:
                 # Standard OpenAI
                 import openai
-                openai.api_key = os.getenv("OPENAI_API_KEY") or settings.OPENAI_API_KEY
-                self.client = openai.OpenAI()
+                openai_key = os.getenv("OPENAI_API_KEY") or settings.OPENAI_API_KEY
+                self.client = openai.OpenAI(api_key=openai_key)
                 logger.info("✓ OpenAI client initialized")
         except Exception as e:
             logger.error(f"✗ Failed to initialize LLM client: {e}")
@@ -70,7 +85,9 @@ class WaterPlannerWithLLM:
         This version ACTUALLY calls your LLM API!
         """
         
-        logger.info("📋 [NODE: Planner (LLM)]")
+        print("\n" + "="*60)
+        print("📋 [WATER PLANNER - GENERATING PLAN]")
+        print("="*60)
         
         try:
             goal = state.get("goal", "")
@@ -78,19 +95,27 @@ class WaterPlannerWithLLM:
             context = state.get("context", {})
             input_event = state.get("input_event", {})
             
+            print(f"📥 Input Event: {json.dumps(input_event, indent=2)}")
+            print(f"🎯 Goal: {goal}")
+            print(f"💡 Intent: {intent}")
+            print(f"📊 Context Keys: {list(context.keys())}")
+            print(f"🤖 Use LLM: {self.use_llm}")
+            
             if self.use_llm:
                 # 🔥 ACTUAL LLM CALL HERE 🔥
-                logger.info("🤖 Calling LLM API...")
+                print("\n🔥 CALLING LLM API...")
+                print(f"   Provider: {self.llm_provider}")
+                print(f"   Model: {self._get_model_name()}")
                 plans = self._generate_llm_plans(
                     intent=intent,
                     goal=goal,
                     context=context,
                     input_event=input_event
                 )
-                logger.info("✓ LLM response received")
+                print("✅ LLM response received and parsed")
             else:
                 # Fallback to deterministic
-                logger.info("Using deterministic fallback (no LLM)")
+                print("⚠️  Using deterministic fallback (no LLM)")
                 plans = self._generate_deterministic_plans(
                     intent=intent,
                     goal=goal,
@@ -124,10 +149,19 @@ class WaterPlannerWithLLM:
         THIS IS WHERE THE ACTUAL API CALL HAPPENS! 🚀
         """
         
+        print("\n" + "-"*60)
+        print("🔮 Building LLM Prompt...")
         # Build prompt for LLM
         prompt = self._build_planning_prompt(intent, goal, context, input_event)
+        print(f"📝 Prompt length: {len(prompt)} characters")
+        print(f"📝 Prompt preview:\n{prompt[:300]}...")
         
         try:
+            print("\n🌐 Making API call to LLM...")
+            print(f"   Client type: {type(self.client)}")
+            print(f"   Model: {self._get_model_name()}")
+            print(f"   Temperature: {settings.LLM_TEMPERATURE}")
+            
             # Make API call
             response = self.client.chat.completions.create(
                 model=self._get_model_name(),
@@ -153,37 +187,68 @@ class WaterPlannerWithLLM:
             
             # Extract response
             llm_output = response.choices[0].message.content
-            logger.info(f"LLM raw output: {llm_output[:200]}...")
+            print("\n✅ LLM API call successful!")
+            print(f"📤 Raw LLM output ({len(llm_output)} chars):\n{llm_output[:500]}...")
+            
+            # Clean markdown code fences (LLMs often wrap JSON in ```json ... ```)
+            print("\n🧹 Cleaning markdown code fences...")
+            llm_output_clean = llm_output.strip()
+            if llm_output_clean.startswith("```json"):
+                print("   Removed ```json prefix")
+                llm_output_clean = llm_output_clean[7:]
+            elif llm_output_clean.startswith("```"):
+                print("   Removed ``` prefix")
+                llm_output_clean = llm_output_clean[3:]
+            if llm_output_clean.endswith("```"):
+                print("   Removed ``` suffix")
+                llm_output_clean = llm_output_clean[:-3]
+            llm_output_clean = llm_output_clean.strip()
+            print(f"📤 Cleaned output ({len(llm_output_clean)} chars)")
             
             # Parse JSON response
             try:
-                parsed = json.loads(llm_output)
+                print("\n🔍 Parsing JSON...")
+                parsed = json.loads(llm_output_clean)
                 plans = parsed.get("plans", [])
+                print(f"✅ JSON parsed successfully! Found {len(plans)} plan(s)")
+                
+                if plans:
+                    for i, plan in enumerate(plans):
+                        print(f"\n   Plan {i+1}: {plan.get('name', 'Unnamed')}")
+                        print(f"      Steps: {len(plan.get('steps', []))}")
+                        print(f"      Duration: {plan.get('estimated_duration', 'N/A')}")
+                        print(f"      Cost: ${plan.get('estimated_cost', 0):,}")
                 
                 if not plans:
-                    logger.warning("LLM returned no plans, using fallback")
+                    print("⚠️  LLM returned no plans, using fallback")
                     return self._generate_deterministic_plans(intent, goal, context, input_event)
                 
                 return plans
             
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse LLM JSON: {e}")
+                print(f"❌ JSON PARSE ERROR: {e}")
+                print(f"   Failed to parse: {llm_output_clean[:200]}...")
+                print("🔄 Falling back to deterministic plans")
                 # Fallback to deterministic
                 return self._generate_deterministic_plans(intent, goal, context, input_event)
         
         except Exception as e:
-            logger.error(f"LLM API call failed: {e}")
+            print(f"❌ LLM API CALL FAILED: {e}")
+            print(f"   Error type: {type(e).__name__}")
+            import traceback
+            print(f"   Traceback: {traceback.format_exc()}")
+            print("🔄 Falling back to deterministic plans")
             # Fallback to deterministic
             return self._generate_deterministic_plans(intent, goal, context, input_event)
     
     def _get_model_name(self) -> str:
         """Get the appropriate model name for the provider"""
         if self.llm_provider == "groq":
-            # Groq models: llama3-70b-8192, mixtral-8x7b-32768, gemma-7b-it
-            return os.getenv("LLM_MODEL", "llama3-70b-8192")
+            # Groq models: llama3-70b-8192, llama-3.3-70b-versatile, mixtral-8x7b-32768
+            return os.getenv("LLM_MODEL") or settings.LLM_MODEL
         else:
             # OpenAI models
-            return settings.LLM_MODEL
+            return os.getenv("LLM_MODEL") or settings.LLM_MODEL
     
     def _build_planning_prompt(self, intent: str, goal: str, 
                               context: Dict, input_event: Dict) -> str:

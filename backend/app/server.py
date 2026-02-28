@@ -26,6 +26,9 @@ from agents.coordination_agent.agent import CoordinationAgent
 # Import Auth Router
 from .routes.auth import router as auth_router
 
+# Import Task Orchestration Router
+from task_orchestration import task_orchestration_router
+
 logger = logging.getLogger("backend.server")
 
 app = FastAPI(title="City Governance - Query API", version="0.2")
@@ -71,6 +74,9 @@ async def shutdown_event():
 
 # Include authentication routes
 app.include_router(auth_router)
+
+# Include task orchestration routes
+app.include_router(task_orchestration_router)
 
 
 @app.post("/api/v1/query")

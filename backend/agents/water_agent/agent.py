@@ -12,6 +12,7 @@ It does NOT execute real-world actions. It only advises.
 """
 
 import logging
+import json
 from datetime import datetime
 from typing import Dict, Optional
 from langgraph.graph import StateGraph, START, END
@@ -228,17 +229,24 @@ class WaterDepartmentAgent:
         }
         """
         
-        logger.info("=" * 60)
-        logger.info("🚀 WATER DEPARTMENT AGENT - NEW DECISION")
-        logger.info("=" * 60)
+        print("=" * 60)
+        print("🚀 WATER DEPARTMENT AGENT - NEW DECISION")
+        print("=" * 60)
+        print(f"📥 Request Type: {request.get('type', 'UNKNOWN')}")
+        print(f"📍 Location: {request.get('location', 'N/A')}")
+        print(f"📋 Full Request: {json.dumps(request, indent=2)}")
+        print("=" * 60)
         
         start_time = datetime.now()
         
         try:
             # Validate input
+            print("\n🔍 Validating input...")
             self._validate_input(request)
+            print("✅ Input validation passed")
             
             # Initialize state
+            print("\n🔧 Initializing agent state...")
             initial_state: DepartmentState = {
                 "input_event": request,
                 "context": {},
@@ -273,15 +281,28 @@ class WaterDepartmentAgent:
                 "retry_needed": False
             }
             
+            print("✅ State initialized successfully")
+            print(f"📊 State keys: {list(initial_state.keys())}")
+            
             # Run graph
-            logger.info(f"📋 Request type: {request.get('type')}")
-            logger.info(f"📍 Location: {request.get('location', 'N/A')}")
+            print("\n" + "="*60)
+            print("🔄 EXECUTING WORKFLOW GRAPH...")
+            print("="*60)
+            print(f"📋 Request type: {request.get('type')}")
+            print(f"📍 Location: {request.get('location', 'N/A')}")
+            print(f"🔢 Max attempts: {settings.MAX_PLANNING_ATTEMPTS}")
             
             result_state = self.graph.invoke(initial_state)
+            
+            print("\n" + "="*60)
+            print("✅ WORKFLOW COMPLETED")
+            print("="*60)
             
             # Calculate execution time
             end_time = datetime.now()
             execution_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            print(f"⏱️  Total execution time: {execution_ms}ms")
             
             result_state["completed_at"] = end_time.isoformat()
             result_state["execution_time_ms"] = execution_ms
@@ -290,13 +311,17 @@ class WaterDepartmentAgent:
                 result_state["started_at"] = result_state["started_at"].isoformat()
             
             # Extract response
+            print("\n📦 Extracting final response...")
             response = result_state.get("response", {})
             
-            logger.info("=" * 60)
-            logger.info(f"✓ DECISION: {response.get('decision', 'unknown').upper()}")
-            logger.info(f"  Confidence: {result_state.get('confidence', 0):.2%}")
-            logger.info(f"  Execution time: {execution_ms}ms")
-            logger.info("=" * 60)
+            print("\n" + "=" * 60)
+            print("🎯 FINAL DECISION")
+            print("=" * 60)
+            print(f"✅ DECISION: {response.get('decision', 'unknown').upper()}")
+            print(f"📊 Confidence: {result_state.get('confidence', 0):.2%}")
+            print(f"⏱️  Execution time: {execution_ms}ms")
+            print(f"📤 Response keys: {list(response.keys())}")
+            print("=" * 60)
             
             return response
         

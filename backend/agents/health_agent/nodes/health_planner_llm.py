@@ -69,18 +69,30 @@ class HealthPlannerLLM:
         }
 
     def _build_prompt(self, intent: str, goal: str, context: Dict, input_event: Dict) -> str:
-        return f"""You are a Public Health planning assistant for a municipal health department.
+        # Extract richer context details
+        disease_incidents = context.get('disease_incidents', [])
+        vaccination_campaigns = context.get('vaccination_campaigns', [])
+        sanitation_inspections = context.get('sanitation_inspections', [])
+        health_facilities = context.get('health_facilities', [])
+        budget_info = context.get('budget_status', {})
+        
+        # Format critical incidents
+        critical_incidents = [i for i in disease_incidents if i.get('severity') == 'critical']
+        
+        return f"""Generate a detailed operational plan for the Health Department.
 
 INTENT: {intent}
 GOAL: {goal}
 
-REQUEST:
+REQUEST DETAILS:
 {json.dumps(input_event, indent=2)}
 
-CONTEXT SUMMARY:
-- recent incidents: {len(context.get('disease_incidents', []))}
-- vaccination campaigns: {len(context.get('vaccination_campaigns', []))}
-- sanitation inspections: {len(context.get('sanitation_inspections', []))}
+CURRENT CONTEXT:
+- Recent Disease Incidents: {len(disease_incidents)} ({len(critical_incidents)} critical)
+- Active Vaccination Campaigns: {len(vaccination_campaigns)}
+- Recent Sanitation Inspections: {len(sanitation_inspections)}
+- Available Health Facilities: {len(health_facilities)}
+- Budget Status: ${budget_info.get('available', 0):,}
 
 AVAILABLE TOOLS (use these exact names in steps):
 - disease_surveillance_tool: Get disease incident data for location
@@ -89,8 +101,32 @@ AVAILABLE TOOLS (use these exact names in steps):
 - mobile_unit_availability: Check available mobile health units
 - public_messaging_capacity: Check public messaging capabilities
 
-Produce 1-2 alternative plans as JSON with this structure:
-{{"plans": [{{"name":"...","steps":[...],"estimated_duration":"X days","estimated_cost":0,"resources_needed":[],"risk_level":"low|medium|high"}}]}}
+REQUIREMENTS:
+1. Generate 1-2 alternative plans
+2. Each plan must include:
+   - Clear step-by-step actions
+   - Estimated duration
+   - Resource requirements (staff, equipment, facilities)
+   - Estimated costs
+   - Health impact assessment
+   - Risk level with justification
+
+Return ONLY valid JSON following this structure:
+{{
+  "plans": [
+    {{
+      "name": "Plan A: Rapid Response",
+      "steps": ["Step 1 description", "Step 2 description", ...],
+      "estimated_duration": "2-3 days",
+      "estimated_cost": 15000,
+      "resources_needed": ["mobile unit", "5 health workers", "testing kits"],
+      "risk_level": "medium",
+      "health_impact": "High - immediate intervention",
+      "pros": ["Fast deployment", "Targeted response"],
+      "cons": ["Resource intensive"]
+    }}
+  ]
+}}
 """
 
     def _generate_llm_plans(self, intent: str, goal: str, context: Dict, input_event: Dict) -> List[Dict]:
@@ -99,11 +135,21 @@ Produce 1-2 alternative plans as JSON with this structure:
             response = self.client.chat.completions.create(
                 model=settings.LLM_MODEL,
                 messages=[
-                    {"role": "system", "content": "You are a municipal public health planner. Return only JSON."},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a Health Department planning AI. Generate structured plans "
+                            "for public health operations. Return ONLY valid JSON with this structure: "
+                            '{"plans": [{"name": "Plan A", "steps": ["step1", "step2"], '
+                            '"estimated_duration": "X days", "estimated_cost": 15000, '
+                            '"resources_needed": ["resource1"], "risk_level": "medium", '
+                            '"health_impact": "description"}]}'
+                        )
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=800,
+                max_tokens=1000,
             )
             llm_output = response.choices[0].message.content
             # Clean markdown code fences like water planner
@@ -121,21 +167,86 @@ Produce 1-2 alternative plans as JSON with this structure:
             return self._generate_deterministic_plans(intent, goal, context, input_event)
 
     def _generate_deterministic_plans(self, intent: str, goal: str, context: Dict, input_event: Dict) -> List[Dict]:
+        """Generate request-type specific fallback plans"""
         plans = []
         location = input_event.get("location", "Unknown")
-        plans.append({
-            "name": "Deploy sanitation + mobile clinic",
-            "steps": [
-                f"Increase street cleaning in {location}",
-                f"Deploy mobile health unit to {location}",
-                "Coordinate with sanitation department",
-                "Launch public messaging campaign"
-            ],
-            "estimated_duration": "1-3 days",
-            "estimated_cost": 12000,
-            "resources_needed": ["mobile_unit", "sanitation_team", "messaging"],
-            "risk_level": "medium"
-        })
+        request_type = input_event.get("type", "")
+        severity = input_event.get("severity", "medium")
+        
+        if "outbreak" in request_type.lower() or "disease" in request_type.lower():
+            # Disease outbreak response
+            plans.append({
+                "name": "Disease Outbreak Response Protocol",
+                "steps": [
+                    f"Deploy rapid response team to {location}",
+                    "Conduct disease surveillance and contact tracing",
+                    "Set up mobile testing facility",
+                    "Coordinate with epidemiology team",
+                    "Launch public health advisory",
+                    "Monitor outbreak evolution"
+                ],
+                "estimated_duration": "3-7 days",
+                "estimated_cost": 25000,
+                "resources_needed": ["mobile unit", "testing kits", "8-10 health workers", "contact tracing team"],
+                "risk_level": severity,
+                "health_impact": "High - Contains disease spread"
+            })
+        
+        elif "vaccination" in request_type.lower() or "immunization" in request_type.lower():
+            # Vaccination campaign
+            plans.append({
+                "name": "Vaccination Campaign Deployment",
+                "steps": [
+                    f"Schedule vaccination drive in {location}",
+                    "Mobilize vaccination teams and supplies",
+                    "Set up vaccination stations",
+                    "Conduct community outreach",
+                    "Monitor coverage and adverse events",
+                    "Submit coverage reports"
+                ],
+                "estimated_duration": "5-10 days",
+                "estimated_cost": 18000,
+                "resources_needed": ["vaccine doses", "cold storage", "6 vaccinators", "registration staff"],
+                "risk_level": "low",
+                "health_impact": "High - Improves community immunity"
+            })
+        
+        elif "inspection" in request_type.lower() or "sanitation" in request_type.lower():
+            # Sanitation inspection
+            plans.append({
+                "name": "Sanitation Inspection and Remediation",
+                "steps": [
+                    f"Conduct sanitation inspection at {location}",
+                    "Document violations and health hazards",
+                    "Issue compliance notice to facility",
+                    "Schedule follow-up inspection",
+                    "Coordinate remediation with sanitation dept"
+                ],
+                "estimated_duration": "2-4 days",
+                "estimated_cost": 8000,
+                "resources_needed": ["inspection team", "testing equipment", "documentation tools"],
+                "risk_level": "medium",
+                "health_impact": "Medium - Prevents foodborne illness"
+            })
+        
+        else:
+            # Generic health response
+            plans.append({
+                "name": "Standard Health Response Plan",
+                "steps": [
+                    f"Assess health situation in {location}",
+                    "Deploy mobile health unit",
+                    "Coordinate with sanitation department",
+                    "Launch public health messaging campaign",
+                    "Monitor and report outcomes"
+                ],
+                "estimated_duration": "2-5 days",
+                "estimated_cost": 12000,
+                "resources_needed": ["mobile unit", "health workers", "messaging resources"],
+                "risk_level": "medium",
+                "health_impact": "Medium - Addresses health concern"
+            })
+        
         return plans
 
 

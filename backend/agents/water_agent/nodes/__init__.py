@@ -3,7 +3,7 @@
 from .context_loader import context_loader_node
 from .intent_analyzer import intent_analyzer_node
 from .goal_setter import goal_setter_node
-from .planner import planner_node
+from .planner_llm_enhanced import planner_node  # ✅ Use enhanced LLM planner
 from .coordination_checkpoint import coordination_checkpoint_node
 from .tool_executor import tool_executor_node
 from .observer import observer_node
