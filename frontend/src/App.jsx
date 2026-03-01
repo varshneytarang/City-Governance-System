@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 import TaskOrchestrationDashboard from './components/TaskOrchestrationDashboard'
 import NotificationPanel from './components/NotificationPanel'
+import WorkflowDetailPage from './components/WorkflowDetailPage'
 import TestPage from './pages/TestPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -64,6 +65,9 @@ function App() {
           <Route path="/agent/health" element={<HealthPage />} />
           <Route path="/agent/finance" element={<FinancePage />} />
           <Route path="/agent/sanitation" element={<SanitationPage />} />
+
+          {/* Workflow Detail Page */}
+          <Route path="/workflow/:workflowId" element={<WorkflowDetailPage />} />
 
           {/* 404 - Redirect to home */}
           <Route path="*" element={<Navigate to="/" />} />

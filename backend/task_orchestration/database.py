@@ -536,6 +536,51 @@ class TaskQueries:
         """
         return self.db.execute_query(query, (task_id,))
     
+    def get_workflows_by_department(
+        self,
+        department: str,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get workflows that involve a specific department
+        (either as initiator or having assigned tasks)
+        """
+        conditions = ["(w.initiated_by_department = %s OR t.assigned_department = %s)"]
+        params = [department, department]
+        
+        if status:
+            conditions.append("w.status = %s")
+            params.append(status)
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+            SELECT DISTINCT w.*
+            FROM workflows w
+            LEFT JOIN tasks t ON w.workflow_id = t.workflow_id
+            WHERE {where_clause}
+            ORDER BY w.created_at DESC
+        """
+        
+        return self.db.execute_query(query, tuple(params))
+    
+    def get_tasks_by_department(
+        self,
+        workflow_id: str,
+        department: str
+    ) -> List[Dict[str, Any]]:
+        """Get all tasks in a workflow assigned to a specific department"""
+        query = """
+            SELECT * FROM tasks
+            WHERE workflow_id = %s AND assigned_department = %s
+            ORDER BY sequence_order ASC
+        """
+        return self.db.execute_query(query, (workflow_id, department))
+    
+    def get_connection(self):
+        """Get raw database connection for complex queries"""
+        return self.db.connection_pool.getconn()
+    
     # ==================== UTILITY QUERIES ====================
     
     def get_workflow_progress(self, workflow_id: str) -> Dict[str, Any]:

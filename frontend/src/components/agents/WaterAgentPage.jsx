@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import AgentChatBot from './AgentChatBot'
 import TaskOrchestrationDashboard from '../TaskOrchestrationDashboard'
+import DepartmentWorkflows from '../DepartmentWorkflows'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
@@ -623,6 +624,17 @@ const WaterAgentPage = () => {
           >
             <TaskOrchestrationDashboard department="water" />
           </motion.div>
+
+          {/* Department Workflows Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9 }}
+            className="mb-8"
+          >
+            <DepartmentWorkflows department="water" />
+          </motion.div>
+
           {/* Enhanced Zone Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {zones.map((zone, index) => (
