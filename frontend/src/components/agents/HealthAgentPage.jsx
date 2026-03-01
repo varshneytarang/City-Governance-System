@@ -5,7 +5,8 @@ import {
   Heart, Activity, TrendingUp, CheckCircle, Clock, MapPin, Home, MessageSquare,
   Users, Shield, AlertCircle, Phone, ArrowRight, Bed, Syringe, 
   Stethoscope, Pill, Thermometer, Plus, Bell, Calendar, Target,
-  TrendingDown, Zap, ChevronRight, ExternalLink
+  TrendingDown, Zap, ChevronRight, ExternalLink,
+  Workflow, PlayCircle, FileText, Wrench
 } from 'lucide-react'
 import AgentChatBot from './AgentChatBot'
 import TaskOrchestrationDashboard from '../TaskOrchestrationDashboard'
@@ -21,6 +22,8 @@ const HealthAgentPage = () => {
   const [chatHistory, setChatHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [selectedFacility, setSelectedFacility] = useState(null)
+  const [recentActivities, setRecentActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(true)
 
   // Update time every minute
   useEffect(() => {
@@ -51,6 +54,27 @@ const HealthAgentPage = () => {
     return () => clearInterval(interval)
   }, [])
   
+  // Fetch recent workflow activities
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/task-orchestration/recent-activities/health?limit=10`)
+        if (response.ok) {
+          const data = await response.json()
+          setRecentActivities(data.activities || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent activities:', error)
+      } finally {
+        setLoadingActivities(false)
+      }
+    }
+    
+    fetchActivities()
+    const interval = setInterval(fetchActivities, 30000)
+    return () => clearInterval(interval)
+  }, [])
+  
   // Format relative time
   const getRelativeTime = (timestamp) => {
     const now = new Date()
@@ -64,6 +88,34 @@ const HealthAgentPage = () => {
     if (diffMins < 60) return `${diffMins} min ago`
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+  }
+
+  // Icon mapping for activities
+  const getActivityIcon = (iconName) => {
+    const icons = {
+      'CheckCircle': CheckCircle,
+      'Clock': Clock,
+      'Activity': Activity,
+      'AlertCircle': AlertCircle,
+      'Workflow': Workflow,
+      'PlayCircle': PlayCircle,
+      'FileText': FileText,
+      'MapPin': MapPin,
+      'Wrench': Wrench,
+      'Heart': Heart
+    }
+    return icons[iconName] || Activity
+  }
+
+  const getActivityColor = (type) => {
+    const colors = {
+      'success': 'text-green-600 bg-green-100',
+      'progress': 'text-blue-600 bg-blue-100',
+      'info': 'text-gray-600 bg-gray-100',
+      'warning': 'text-orange-600 bg-orange-100',
+      'error': 'text-red-600 bg-red-100'
+    }
+    return colors[type] || colors['info']
   }
 
   // Building2 icon component (for clinics) - MUST be defined before kpiMetrics
@@ -609,14 +661,8 @@ const HealthAgentPage = () => {
             </motion.div>
 
             {/* Department Workflows Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="mb-8 col-span-full"
-            >
-              <DepartmentWorkflows department="health" />
-            </motion.div>
+        
+          </div>
 
             {/* Recent Activity - 1 column */}
             <div>
@@ -630,66 +676,73 @@ const HealthAgentPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-bold mb-1">Recent Activity</h2>
-                      <p className="text-purple-100 text-sm">Chat history with Health Agent</p>
+                      <p className="text-purple-100 text-sm">Completed workflows</p>
                     </div>
                     <Activity size={28} className="opacity-80" />
                   </div>
                 </div>
 
                 <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
-                  {loadingHistory ? (
+                  {loadingActivities ? (
                     <div className="text-center py-8">
                       <div className="animate-pulse space-y-3">
                         <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
                         <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
                       </div>
-                      <p className="text-gray-500 text-sm mt-4">Loading activity...</p>
+                      <p className="text-gray-500 text-sm mt-4">Loading activities...</p>
                     </div>
-                  ) : chatHistory.length === 0 ? (
+                  ) : recentActivities.length === 0 ? (
                     <div className="text-center py-8">
-                      <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                      <Activity size={48} className="mx-auto text-gray-300 mb-4" />
                       <p className="text-gray-500 font-medium">No recent activity</p>
-                      <p className="text-gray-400 text-sm mt-1">Start a conversation!</p>
+                      <p className="text-gray-400 text-sm mt-1">Completed workflows will appear here</p>
                     </div>
                   ) : (
-                    chatHistory.slice(0, 5).map((item, index) => (
-                      <motion.div
-                        key={item.id || index}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.7 + index * 0.1 }}
-                        className="backdrop-blur-sm bg-white/80 border border-pink-200 rounded-2xl p-4 hover:bg-white hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-pink-500 to-purple-500 text-white">
-                            <Heart size={20} />
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            {item.summary ? (
-                              <div className="text-sm text-gray-900 mb-2 whitespace-pre-line leading-relaxed">
-                                {item.summary}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-900 mb-2 line-clamp-2">
-                                Health query processed
+                    recentActivities.slice(0, 6).map((activity, index) => {
+                      const IconComponent = getActivityIcon(activity.icon)
+                      return (
+                        <motion.div
+                          key={activity.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          onClick={() => activity.workflow_id && navigate(`/workflow/${activity.workflow_id}`)}
+                          className="backdrop-blur-sm bg-white/80 border border-pink-200 rounded-2xl p-4 hover:bg-white hover:shadow-md transition-all cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl ${getActivityColor(activity.type)}`}>
+                              <IconComponent size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 mb-1">
+                                {activity.message}
                               </p>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock size={11} />
-                                {getRelativeTime(item.created_at)}
-                              </span>
-                              <PriorityBadge priority="completed" />
+                              {activity.workflow_name && (
+                                <p className="text-xs text-gray-600 mb-1 truncate">
+                                  {activity.workflow_name}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">{activity.time}</span>
+                                {activity.priority && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    activity.priority === 'critical' ? 'bg-red-100 text-red-700' :
+                                    activity.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                    activity.priority === 'medium' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {activity.priority}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))
+                        </motion.div>
+                      )
+                    })
                   )}
                 </div>
-              </motion.div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Analytics Dashboard Row */}

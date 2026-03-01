@@ -7,7 +7,7 @@ knowledge graphs, and notifications.
 
 import json
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import UUID4
 
@@ -66,112 +66,17 @@ async def create_workflow(
             raise HTTPException(status_code=400, detail="Failed to create workflow")
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/workflows/create-with-ai", response_model=Dict[str, Any], status_code=201)
-async def create_workflow_with_ai(
-    data: Dict[str, Any],
-    tm: TaskManager = Depends(get_tm),
-    kg: KnowledgeGraphGenerator = Depends(get_graph),
-):
-    """
-    Create a complete workflow with AI-generated tasks, dependencies, and knowledge graph
-    
-    Request body should contain:
-    - workflow: WorkflowCreate data
-    - tasks: Array of AI-generated tasks from /workflows/generate-tasks
-    """
-    try:
-        workflow_data = data.get('workflow')
-        ai_tasks = data.get('tasks', [])
-        
-        if not workflow_data:
-            raise HTTPException(status_code=400, detail="Missing workflow data")
-        
-        # Create the workflow
-        workflow = WorkflowCreate(**workflow_data)
-        created_workflow = tm.create_workflow(workflow)
-        workflow_id = created_workflow.workflow_id
-        
-        logger.info(f"Creating workflow {workflow_id} with {len(ai_tasks)} AI-generated tasks")
-        
-        # Track created task IDs for dependency mapping
-        task_id_mapping = {}  # temp_id -> actual task_id
-        created_tasks = []
-        
-        # Create all tasks first (without dependencies)
-        for i, task_data in enumerate(ai_tasks):
-            temp_id = task_data.get('task_id', f'temp_{i}')
-            
-            # Prepare task creation data
-            task_create = TaskCreate(
-                workflow_id=workflow_id,
-                task_title=task_data.get('task_title', f'Task {i+1}'),
-                task_description=task_data.get('task_description', ''),
-                task_type=task_data.get('task_type', 'operational'),
-                assigned_department=task_data.get('assigned_department', workflow_data.get('initiated_by_department')),
-                priority=task_data.get('priority', 'medium'),
-                estimated_duration_hours=float(task_data.get('estimated_duration_hours', 4.0)),
-                estimated_cost=float(task_data.get('estimated_cost', 0.0)),
-                status='pending',
-                sequence_order=i,
-                tags=task_data.get('tags', []),
-                metadata={'ai_generated': True, 'original_index': i}
-            )
-            
-            created_task = tm.create_task(task_create)
-            task_id_mapping[temp_id] = created_task.task_id
-            task_id_mapping[i] = created_task.task_id  # Also map by index
-            created_tasks.append(created_task)
-        
-        # Now create dependencies
-        dependencies_created = []
-        for i, task_data in enumerate(ai_tasks):
-            depends_on = task_data.get('depends_on', [])
-            current_task_id = task_id_mapping[i]
-            
-            for dep_index in depends_on:
-                if dep_index in task_id_mapping:
-                    dep_create = DependencyCreate(
-                        task_id=current_task_id,
-                        depends_on_task_id=task_id_mapping[dep_index],
-                        dependency_type='finish_to_start',
-                        is_hard_dependency=True
-                    )
-                    dependency = tm.create_dependency(dep_create)
-                    dependencies_created.append(dependency)
-        
-        # Generate knowledge graph
-        try:
-            graph_data = kg.generate_workflow_graph(workflow_id)
-        except Exception as e:
-            logger.warning(f"Knowledge graph generation failed: {e}")
-            graph_data = None
-        
-        logger.info(f"✓ Workflow {workflow_id} created with {len(created_tasks)} tasks and {len(dependencies_created)} dependencies")
-        
-        return {
-            "workflow": created_workflow,
-            "tasks": created_tasks,
-            "dependencies_count": len(dependencies_created),
-            "knowledge_graph": graph_data,
-            "message": f"Successfully created workflow with {len(created_tasks)} AI-generated tasks"
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to create workflow with AI: {e}")
+        logger.error(f"Error creating workflow: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/workflows/generate-tasks")
 async def generate_tasks_ai(
     workflow_data: Dict[str, Any],
-    planner: ContingencyPlanner = Depends(get_planner),
-    tm: TaskManager = Depends(get_tm)
+    planner: ContingencyPlanner = Depends(get_planner)
 ):
     """
-    Generate task breakdown using AI based on workflow details and database context
+    Generate task breakdown using AI based on workflow details
     
     Returns suggested tasks with dependencies that can be reviewed and edited
     """
@@ -185,19 +90,13 @@ async def generate_tasks_ai(
         department = workflow_data.get('department', '')
         priority = workflow_data.get('priority', 'medium')
         
-        # Gather database context for more realistic planning
-        database_context = await _gather_database_context(department, tm)
-        
-        # Build enhanced prompt for LLM with database context
-        prompt = f"""You are an expert city governance operations planner. Generate a detailed task breakdown for the following workflow using real city data.
+        # Build prompt for LLM
+        prompt = f"""You are an expert city governance operations planner. Generate a detailed task breakdown for the following workflow.
 
 Workflow: {workflow_name}
 Description: {workflow_desc}
 Department: {department}
 Priority: {priority}
-
-CURRENT CITY DATA CONTEXT:
-{database_context}
 
 Generate 5-10 specific, actionable tasks that:
 1. Break down the workflow into logical steps
@@ -284,156 +183,6 @@ async def get_workflow(
     return workflow
 
 
-@router.get("/workflows/{workflow_id}/detailed")
-async def get_workflow_detailed(
-    workflow_id: str,
-    tm: TaskManager = Depends(get_tm),
-    engine: WorkflowEngine = Depends(get_engine)
-):
-    """
-    Get detailed workflow information including:
-    - All tasks with dependencies
-    - Progress metrics
-    - Stalled tasks with reasons
-    - Blocking departments
-    """
-    try:
-        # Get workflow with tasks
-        workflow = tm.get_workflow_with_tasks(workflow_id)
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        # Get all tasks
-        tasks = tm.queries.get_workflow_tasks(workflow_id)
-        
-        # Analyze each task for blocking/stall reasons
-        task_analysis = []
-        stalled_tasks = []
-        blocking_departments = {}
-        
-        for task in tasks:
-            task_id = task['task_id']
-            task_status = task['status']
-            assigned_dept = task.get('assigned_department', 'Unknown')
-            
-            # Get dependencies
-            dependencies = tm.queries.get_task_dependencies(task_id)
-            blocking_deps = []
-            is_blocked = False
-            stall_reason = None
-            
-            # Check if task is blocked by dependencies
-            if task_status in ['pending', 'ready']:
-                for dep in dependencies:
-                    dep_task = tm.queries.get_task(dep['depends_on_task_id'])
-                    if dep_task and dep_task['status'] not in ['completed', 'cancelled']:
-                        blocking_deps.append({
-                            'task_id': dep_task['task_id'],
-                            'task_title': dep_task['task_title'],
-                            'status': dep_task['status'],
-                            'department': dep_task.get('assigned_department', 'Unknown')
-                        })
-                        is_blocked = True
-                        
-                        # Track blocking departments
-                        blocking_dept = dep_task.get('assigned_department', 'Unknown')
-                        if blocking_dept not in blocking_departments:
-                            blocking_departments[blocking_dept] = 0
-                        blocking_departments[blocking_dept] += 1
-            
-            # Determine stall reason
-            if is_blocked:
-                stall_reason = f"Waiting on {len(blocking_deps)} dependent task(s)"
-            elif task_status == 'in_progress':
-                # Check if task has been in progress too long
-                if task.get('actual_start_date'):
-                    from datetime import datetime, timedelta
-                    start_date = task['actual_start_date']
-                    if isinstance(start_date, str):
-                        start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-                    expected_duration = task.get('estimated_duration_hours', 24)
-                    if datetime.now() > start_date + timedelta(hours=expected_duration * 1.5):
-                        stall_reason = "Exceeding estimated duration"
-                        stalled_tasks.append({
-                            'task': task,
-                            'reason': stall_reason,
-                            'department': assigned_dept
-                        })
-            elif task_status == 'blocked':
-                stall_reason = "Manually blocked"
-                stalled_tasks.append({
-                    'task': task,
-                    'reason': stall_reason,
-                    'department': assigned_dept
-                })
-            
-            task_analysis.append({
-                **task,
-                'is_blocked': is_blocked,
-                'blocking_dependencies': blocking_deps,
-                'stall_reason': stall_reason
-            })
-        
-        # Calculate progress statistics
-        total_tasks = len(tasks)
-        completed_tasks = len([t for t in tasks if t['status'] == 'completed'])
-        in_progress_tasks = len([t for t in tasks if t['status'] == 'in_progress'])
-        pending_tasks = len([t for t in tasks if t['status'] in ['pending', 'ready']])
-        blocked_tasks = len([t for t in task_analysis if t.get('is_blocked', False) or t['status'] == 'blocked'])
-        
-        # Group tasks by status
-        tasks_by_status = {
-            'completed': [t for t in task_analysis if t['status'] == 'completed'],
-            'in_progress': [t for t in task_analysis if t['status'] == 'in_progress'],
-            'ready': [t for t in task_analysis if t['status'] == 'ready'],
-            'pending': [t for t in task_analysis if t['status'] == 'pending'],
-            'blocked': [t for t in task_analysis if t.get('is_blocked', False) or t['status'] == 'blocked'],
-            'cancelled': [t for t in task_analysis if t['status'] == 'cancelled']
-        }
-        
-        # Department involvement
-        dept_involvement = {}
-        for task in tasks:
-            dept = task.get('assigned_department', 'Unknown')
-            if dept not in dept_involvement:
-                dept_involvement[dept] = {
-                    'total_tasks': 0,
-                    'completed': 0,
-                    'in_progress': 0,
-                    'pending': 0,
-                    'blocked': 0
-                }
-            dept_involvement[dept]['total_tasks'] += 1
-            status = task['status']
-            if status in dept_involvement[dept]:
-                dept_involvement[dept][status] += 1
-        
-        return {
-            'workflow': workflow.dict(),
-            'progress': {
-                'total_tasks': total_tasks,
-                'completed_tasks': completed_tasks,
-                'in_progress_tasks': in_progress_tasks,
-                'pending_tasks': pending_tasks,
-                'blocked_tasks': blocked_tasks,
-                'completion_percentage': round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1),
-                'tasks_remaining': total_tasks - completed_tasks
-            },
-            'tasks': task_analysis,
-            'tasks_by_status': tasks_by_status,
-            'stalled_tasks': stalled_tasks,
-            'blocking_departments': [
-                {'department': dept, 'blocking_count': count}
-                for dept, count in sorted(blocking_departments.items(), key=lambda x: x[1], reverse=True)
-            ],
-            'department_involvement': dept_involvement
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting detailed workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/workflows", response_model=List[WorkflowResponse])
 async def list_workflows(
     status: Optional[str] = None,
@@ -444,58 +193,6 @@ async def list_workflows(
     """List workflows with optional filters"""
     workflows = tm.list_workflows(status=status, department=department, limit=limit)
     return workflows
-
-
-@router.get("/workflows/department/{department}")
-async def get_department_workflows_with_tasks(
-    department: str,
-    status: Optional[str] = None,
-    limit: int = Query(20, ge=1, le=100),
-    tm: TaskManager = Depends(get_tm)
-):
-    """
-    Get workflows and tasks for a specific department
-    
-    Returns workflows where:
-    - The workflow is initiated by the department, OR
-    - The department has tasks assigned to them
-    
-    Includes task details showing what each department needs to do
-    """
-    try:
-        # Get workflows initiated by or involving this department
-        workflows = tm.list_workflows(department=department, status=status, limit=limit)
-        
-        result = []
-        for workflow in workflows:
-            # Get all tasks for this workflow
-            workflow_with_tasks = tm.get_workflow_with_tasks(workflow.workflow_id)
-            
-            if workflow_with_tasks:
-                # Filter tasks to show only those assigned to this department
-                department_tasks = [
-                    task for task in workflow_with_tasks.tasks 
-                    if task.assigned_department == department
-                ]
-                
-                result.append({
-                    "workflow": workflow,
-                    "department_tasks": department_tasks,
-                    "total_tasks": workflow_with_tasks.total_tasks,
-                    "department_task_count": len(department_tasks),
-                    "completion_percentage": workflow_with_tasks.completion_percentage
-                })
-        
-        return {
-            "department": department,
-            "workflows": result,
-            "total_workflows": len(result),
-            "total_department_tasks": sum(w["department_task_count"] for w in result)
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get department workflows: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/workflows/{workflow_id}", response_model=WorkflowResponse)
@@ -558,11 +255,12 @@ async def create_task(
 ):
     """Create a new task"""
     try:
-        result = tm.create_task(task.dict())
+        result = tm.create_task(task)
         if not result:
             raise HTTPException(status_code=400, detail="Failed to create task")
         return result
     except Exception as e:
+        logger.error(f"Error creating task: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -610,6 +308,43 @@ async def list_tasks(
         tasks = db.execute_query(query, tuple(params) if params else None)
     
     return tasks[:limit]
+
+
+@router.get("/tasks/ongoing/{department}")
+async def get_ongoing_tasks(
+    department: str,
+    limit: int = Query(50, ge=1, le=200),
+    tm: TaskManager = Depends(get_tm)
+):
+    """
+    Get ongoing (in_progress) tasks for a department
+    Used by Task Orchestration Dashboard to show active tasks
+    """
+    try:
+        with tm.queries.db.get_cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    t.*,
+                    w.workflow_name,
+                    w.workflow_type
+                FROM tasks t
+                JOIN workflows w ON t.workflow_id = w.workflow_id
+                WHERE t.assigned_department = %s
+                  AND t.status = 'in_progress'
+                ORDER BY t.updated_at DESC
+                LIMIT %s
+            """, (department, limit))
+            
+            tasks = cursor.fetchall()
+        
+        return {
+            'department': department,
+            'tasks': tasks,
+            'count': len(tasks)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching ongoing tasks for {department}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse)
@@ -722,7 +457,7 @@ async def create_dependency(
 ):
     """Create task dependency"""
     try:
-        success = tm.create_dependency(dependency.dict())
+        success = tm.create_dependency(dependency)
         
         if not success:
             raise HTTPException(status_code=400, detail="Failed to create dependency (circular?)")
@@ -730,6 +465,7 @@ async def create_dependency(
         return {"success": True, "message": "Dependency created"}
     
     except Exception as e:
+        logger.error(f"Error creating dependency: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -923,180 +659,6 @@ async def get_next_tasks_to_execute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/workflows/by-department/{department}")
-async def get_workflows_by_department(
-    department: str,
-    status: Optional[str] = Query(None),
-    tm: TaskManager = Depends(get_tm)
-):
-    """
-    Get workflows that involve a specific department
-    Returns workflows where the department is initiator or has assigned tasks
-    """
-    try:
-        workflows = tm.queries.get_workflows_by_department(department, status)
-        
-        # Enhance with task counts and involvement details
-        enhanced_workflows = []
-        for workflow in workflows:
-            workflow_id = workflow['workflow_id']
-            
-            # Get tasks for this department
-            dept_tasks = tm.queries.get_tasks_by_department(workflow_id, department)
-            all_tasks = tm.queries.get_workflow_tasks(workflow_id)
-            
-            # Calculate involvement
-            is_initiator = workflow.get('initiated_by_department') == department
-            has_tasks = len(dept_tasks) > 0
-            involvement_percentage = (len(dept_tasks) / len(all_tasks) * 100) if all_tasks else 0
-            
-            enhanced_workflow = {
-                **workflow,
-                'department_involvement': {
-                    'is_initiator': is_initiator,
-                    'has_tasks': has_tasks,
-                    'assigned_tasks_count': len(dept_tasks),
-                    'total_tasks_count': len(all_tasks),
-                    'involvement_percentage': round(involvement_percentage, 1)
-                },
-                'department_tasks': dept_tasks
-            }
-            enhanced_workflows.append(enhanced_workflow)
-        
-        return {
-            "department": department,
-            "count": len(enhanced_workflows),
-            "workflows": enhanced_workflows
-        }
-    except Exception as e:
-        logger.error(f"Error fetching workflows for department {department}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ==================== HELPER FUNCTIONS ====================
-
-async def _gather_database_context(department: str, tm: TaskManager) -> str:
-    """
-    Gather relevant database context for AI workflow generation
-    Queries actual city data to make planning more realistic
-    """
-    context_parts = []
-    
-    try:
-        # Get database connection from task manager
-        conn = tm.queries.get_connection()
-        cursor = conn.cursor()
-        
-        # Department-specific context gathering
-        if department == 'water':
-            cursor.execute("""
-                SELECT COUNT(*) as total, 
-                       COUNT(CASE WHEN status = 'operational' THEN 1 END) as operational,
-                       AVG(capacity_liters) as avg_capacity
-                FROM reservoirs
-            """)
-            reservoir_data = cursor.fetchone()
-            if reservoir_data:
-                context_parts.append(f"• Water Infrastructure: {reservoir_data[0]} reservoirs, {reservoir_data[1]} operational, avg capacity {reservoir_data[2]:.0f}L")
-            
-            cursor.execute("""
-                SELECT COUNT(*) as total, 
-                       COUNT(CASE WHEN condition = 'good' THEN 1 END) as good_condition
-                FROM pipelines
-            """)
-            pipeline_data = cursor.fetchone()
-            if pipeline_data:
-                context_parts.append(f"• Pipelines: {pipeline_data[0]} total, {pipeline_data[1]} in good condition")
-        
-        elif department == 'fire':
-            cursor.execute("""
-                SELECT COUNT(*) as total_incidents,
-                       COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved,
-                       AVG(severity) as avg_severity
-                FROM incidents
-                WHERE incident_type = 'fire'
-                AND created_at > NOW() - INTERVAL '30 days'
-            """)
-            incident_data = cursor.fetchone()
-            if incident_data:
-                context_parts.append(f"• Recent Fire Incidents (30 days): {incident_data[0]} total, {incident_data[1]} resolved, avg severity {incident_data[2]:.1f}/5")
-        
-        elif department == 'engineering':
-            cursor.execute("""
-                SELECT COUNT(*) as total,
-                       COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as active,
-                       SUM(total_cost) as total_cost
-                FROM projects
-                WHERE department = 'engineering'
-            """)
-            project_data = cursor.fetchone()
-            if project_data:
-                context_parts.append(f"• Engineering Projects: {project_data[0]} total, {project_data[1]} active, ${project_data[2]:,.0f} total cost")
-        
-        elif department == 'health':
-            cursor.execute("""
-                SELECT COUNT(*) as total_cases,
-                       disease_type,
-                       COUNT(*) as case_count
-                FROM disease_incidents
-                WHERE reported_date > NOW() - INTERVAL '30 days'
-                GROUP BY disease_type
-                ORDER BY case_count DESC
-                LIMIT 3
-            """)
-            health_data = cursor.fetchall()
-            if health_data:
-                diseases = ", ".join([f"{row[1]}: {row[2]} cases" for row in health_data])
-                context_parts.append(f"• Recent Health Issues (30 days): {diseases}")
-        
-        elif department == 'finance':
-            cursor.execute("""
-                SELECT department,
-                       SUM(total_budget) as budget,
-                       SUM(spent) as spent,
-                       AVG(utilization_percent) as utilization
-                FROM department_budgets
-                WHERE year = EXTRACT(YEAR FROM NOW())
-                GROUP BY department
-                ORDER BY budget DESC
-                LIMIT 5
-            """)
-            budget_data = cursor.fetchall()
-            if budget_data:
-                budgets = ", ".join([f"{row[0]}: ${row[1]:,.0f} ({row[3]:.1f}% used)" for row in budget_data])
-                context_parts.append(f"• Department Budgets: {budgets}")
-        
-        elif department == 'sanitation':
-            cursor.execute("""
-                SELECT COUNT(*) as total_workers,
-                       AVG(efficiency_rating) as avg_efficiency
-                FROM workers
-                WHERE department = 'sanitation' AND status = 'active'
-            """)
-            worker_data = cursor.fetchone()
-            if worker_data:
-                context_parts.append(f"• Sanitation Workers: {worker_data[0]} active, avg efficiency {worker_data[1]:.2f}/5")
-        
-        # General city data
-        cursor.execute("""
-            SELECT COUNT(*) as active_workflows,
-                   COUNT(CASE WHEN priority = 'critical' THEN 1 END) as critical
-            FROM workflows
-            WHERE status IN ('active', 'in_progress')
-        """)
-        workflow_data = cursor.fetchone()
-        if workflow_data:
-            context_parts.append(f"• Active Workflows: {workflow_data[0]} total, {workflow_data[1]} critical priority")
-        
-        cursor.close()
-        
-    except Exception as e:
-        logger.warning(f"Could not gather database context: {e}")
-        context_parts.append("• Using general city governance knowledge")
-    
-    return "\n".join(context_parts) if context_parts else "No specific city data available"
-
-
 # ==================== HEALTH CHECK ====================
 
 @router.get("/health")
@@ -1107,3 +669,189 @@ async def health_check():
         "service": "task-orchestration",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+# ==================== RECENT ACTIVITIES ====================
+
+@router.get("/recent-activities/{department}")
+async def get_recent_activities(
+    department: str,
+    limit: int = Query(10, ge=1, le=50),
+    tm: TaskManager = Depends(get_tm)
+):
+    """
+    Get recent workflow and task activities for a department
+    Returns recent status changes, new workflows, task completions, etc.
+    """
+    try:
+        activities = []
+        
+        # Get database cursor using context manager (returns RealDictCursor by default)
+        with tm.queries.db.get_cursor() as cursor:
+            # Query recent task updates for department
+            cursor.execute("""
+                SELECT 
+                    t.task_id,
+                    t.task_title,
+                    t.status,
+                    t.updated_at,
+                    t.workflow_id,
+                    w.workflow_name,
+                    t.assigned_department,
+                    t.priority
+                FROM tasks t
+                JOIN workflows w ON t.workflow_id = w.workflow_id
+                WHERE t.assigned_department = %s
+                ORDER BY t.updated_at DESC
+                LIMIT %s
+            """, (department, limit * 2))
+            
+            recent_tasks = cursor.fetchall()
+        
+        # Use separate cursor for second query - only get completed workflows
+        with tm.queries.db.get_cursor() as cursor:
+            # Query recent workflow updates (only completed ones)
+            cursor.execute("""
+                SELECT 
+                    workflow_id,
+                    workflow_name,
+                    status,
+                    priority,
+                    updated_at,
+                    initiated_by_department
+                FROM workflows
+                WHERE status = 'completed'
+                  AND (
+                    initiated_by_department = %s
+                    OR workflow_id IN (
+                        SELECT DISTINCT workflow_id 
+                        FROM tasks 
+                        WHERE assigned_department = %s
+                    )
+                  )
+                ORDER BY updated_at DESC
+                LIMIT %s
+            """, (department, department, limit))
+            
+            recent_workflows = cursor.fetchall()
+        
+        # Process recent tasks into activities
+        for task in recent_tasks:
+            activity_type = 'info'
+            icon = 'Activity'
+            
+            if task['status'] == 'completed':
+                activity_type = 'success'
+                icon = 'CheckCircle'
+                message = f"Task completed: {task['task_title']}"
+            elif task['status'] == 'in_progress':
+                activity_type = 'progress'
+                icon = 'Clock'
+                message = f"Task started: {task['task_title']}"
+            elif task['status'] == 'blocked':
+                activity_type = 'warning'
+                icon = 'AlertCircle'
+                message = f"Task blocked: {task['task_title']}"
+            else:
+                icon = 'Activity'
+                message = f"Task updated: {task['task_title']}"
+            
+            # Calculate time ago
+            updated = task['updated_at']
+            if isinstance(updated, str):
+                updated = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+            elif updated.tzinfo is None:
+                # Make timezone aware if naive
+                updated = updated.replace(tzinfo=timezone.utc)
+                
+            time_diff = datetime.now(timezone.utc) - updated
+            
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days} day{'s' if time_diff.days > 1 else ''} ago"
+            elif time_diff.seconds >= 3600:
+                hours = time_diff.seconds // 3600
+                time_ago = f"{hours} hour{'s' if hours > 1 else ''} ago"
+            elif time_diff.seconds >= 60:
+                minutes = time_diff.seconds // 60
+                time_ago = f"{minutes} min ago"
+            else:
+                time_ago = "just now"
+            
+            activities.append({
+                'id': str(task['task_id']),
+                'message': message,
+                'time': time_ago,
+                'type': activity_type,
+                'icon': icon,
+                'workflow_name': task['workflow_name'],
+                'workflow_id': str(task['workflow_id']),
+                'priority': task.get('priority', 'medium'),
+                'timestamp': updated.isoformat()
+            })
+        
+        # Process workflows into activities
+        for workflow in recent_workflows:
+            activity_type = 'info'
+            icon = 'Workflow'
+            
+            if workflow['status'] == 'completed':
+                activity_type = 'success'
+                icon = 'CheckCircle'
+                message = f"Workflow completed: {workflow['workflow_name']}"
+            elif workflow['status'] == 'active' or workflow['status'] == 'in_progress':
+                activity_type = 'progress'
+                icon = 'PlayCircle'
+                message = f"Workflow active: {workflow['workflow_name']}"
+            elif workflow['status'] == 'draft':
+                activity_type = 'info'
+                icon = 'FileText'
+                message = f"Workflow created: {workflow['workflow_name']}"
+            else:
+                message = f"Workflow {workflow['status']}: {workflow['workflow_name']}"
+            
+            # Calculate time ago
+            updated = workflow['updated_at']
+            if isinstance(updated, str):
+                updated = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+            elif updated.tzinfo is None:
+                # Make timezone aware if naive
+                updated = updated.replace(tzinfo=timezone.utc)
+                
+            time_diff = datetime.now(timezone.utc) - updated
+            
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days} day{'s' if time_diff.days > 1 else ''} ago"
+            elif time_diff.seconds >= 3600:
+                hours = time_diff.seconds // 3600
+                time_ago = f"{hours} hour{'s' if hours > 1 else ''} ago"
+            elif time_diff.seconds >= 60:
+                minutes = time_diff.seconds // 60
+                time_ago = f"{minutes} min ago"
+            else:
+                time_ago = "just now"
+            
+            activities.append({
+                'id': str(workflow['workflow_id']),
+                'message': message,
+                'time': time_ago,
+                'type': activity_type,
+                'icon': icon,
+                'workflow_name': workflow['workflow_name'],
+                'workflow_id': str(workflow['workflow_id']),
+                'priority': workflow.get('priority', 'medium'),
+                'timestamp': updated.isoformat()
+            })
+        
+        # Sort by timestamp and limit
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        activities = activities[:limit]
+        
+        return {
+            'department': department,
+            'activities': activities,
+            'count': len(activities)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching recent activities for {department}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

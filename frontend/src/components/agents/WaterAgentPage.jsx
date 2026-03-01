@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Droplets, Activity, TrendingUp, CheckCircle, Clock, MapPin, Home, MessageSquare,
   CloudRain, Sun, Cloud, Thermometer, Wind, AlertCircle, Wrench, Users,
-  BarChart3, TrendingDown, Zap, Shield, ArrowUp, ArrowDown, Radio
+  BarChart3, TrendingDown, Zap, Shield, ArrowUp, ArrowDown, Radio, PlayCircle,
+  FileText, Workflow
 } from 'lucide-react'
 import AgentChatBot from './AgentChatBot'
 import TaskOrchestrationDashboard from '../TaskOrchestrationDashboard'
@@ -19,11 +20,35 @@ const WaterAgentPage = () => {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [chatHistory, setChatHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(true)
+  const [recentActivities, setRecentActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(true)
   
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
+  }, [])
+  
+  // Fetch recent workflow activities
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/task-orchestration/recent-activities/water?limit=10`)
+        if (response.ok) {
+          const data = await response.json()
+          setRecentActivities(data.activities || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent activities:', error)
+      } finally {
+        setLoadingActivities(false)
+      }
+    }
+    
+    fetchActivities()
+    // Refresh activities every 30 seconds
+    const interval = setInterval(fetchActivities, 30000)
+    return () => clearInterval(interval)
   }, [])
   
   // Fetch chat history from API
@@ -81,6 +106,33 @@ const WaterAgentPage = () => {
     }
     
     return 'Query processed'
+  }
+
+  // Icon mapping for activities
+  const getActivityIcon = (iconName) => {
+    const icons = {
+      'CheckCircle': CheckCircle,
+      'Clock': Clock,
+      'Activity': Activity,
+      'AlertCircle': AlertCircle,
+      'Workflow': Workflow,
+      'PlayCircle': PlayCircle,
+      'FileText': FileText,
+      'MapPin': MapPin,
+      'Wrench': Wrench
+    }
+    return icons[iconName] || Activity
+  }
+
+  const getActivityColor = (type) => {
+    const colors = {
+      'success': 'text-green-600 bg-green-100',
+      'progress': 'text-blue-600 bg-blue-100',
+      'info': 'text-gray-600 bg-gray-100',
+      'warning': 'text-orange-600 bg-orange-100',
+      'error': 'text-red-600 bg-red-100'
+    }
+    return colors[type] || colors['info']
   }
 
   // Hero KPI Stats with trends
@@ -738,65 +790,71 @@ const WaterAgentPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Recent Activity</h2>
-                  <p className="text-purple-100 text-sm">Chat history with Water Agent</p>
+                  <p className="text-purple-100 text-sm">Completed workflows</p>
                 </div>
-                <Clock size={28} className="opacity-80" />
+                <Activity size={28} className="opacity-80" />
               </div>
             </div>
             
             <div className="p-6">
               <div className="space-y-3">
-                {loadingHistory ? (
+                {loadingActivities ? (
                   <div className="text-center py-8">
                     <div className="animate-pulse">
                       <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
                       <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
                     </div>
-                    <p className="text-gray-500 text-sm mt-4">Loading history...</p>
+                    <p className="text-gray-500 text-sm mt-4">Loading activities...</p>
                   </div>
-                ) : chatHistory.length === 0 ? (
+                ) : recentActivities.length === 0 ? (
                   <div className="text-center py-8">
-                    <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                    <Activity size={48} className="mx-auto text-gray-300 mb-4" />
                     <p className="text-gray-500 font-medium">No recent activity</p>
-                    <p className="text-gray-400 text-sm mt-1">Start a conversation in the chat!</p>
+                    <p className="text-gray-400 text-sm mt-1">Completed workflows will appear here</p>
                   </div>
                 ) : (
-                  chatHistory.slice(0, 5).map((item, index) => (
-                    <motion.div
-                      key={item.id || index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 1.4 + index * 0.1 }}
-                      className="backdrop-blur-sm bg-white/60 border border-white/60 rounded-2xl p-4 hover:bg-white/80 hover:border-blue-200 transition-all"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100 text-blue-600">
-                          <MessageSquare size={20} />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          {item.summary ? (
-                            <div className="text-sm text-gray-900 mb-2 whitespace-pre-line">
-                              {item.summary}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-900 font-medium mb-2 line-clamp-2">
-                              {getQuerySummary(item.request)}
+                  recentActivities.slice(0, 6).map((activity, index) => {
+                    const IconComponent = getActivityIcon(activity.icon)
+                    return (
+                      <motion.div
+                        key={activity.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => activity.workflow_id && navigate(`/workflow/${activity.workflow_id}`)}
+                        className="backdrop-blur-sm bg-white/60 border border-white/60 rounded-2xl p-4 hover:bg-white/80 hover:border-blue-200 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-xl ${getActivityColor(activity.type)}`}>
+                            <IconComponent size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 mb-1">
+                              {activity.message}
                             </p>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock size={11} />
-                              {getRelativeTime(item.created_at)}
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                              Completed
-                            </span>
+                            {activity.workflow_name && (
+                              <p className="text-xs text-gray-600 mb-1 truncate">
+                                {activity.workflow_name}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">{activity.time}</span>
+                              {activity.priority && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  activity.priority === 'critical' ? 'bg-red-100 text-red-700' :
+                                  activity.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                  activity.priority === 'medium' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {activity.priority}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))
+                      </motion.div>
+                    )
+                  })
                 )}
               </div>
             </div>

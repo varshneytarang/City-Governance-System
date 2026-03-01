@@ -54,14 +54,23 @@ export default function TaskOrchestrationDashboard({ department = null }) {
     try {
       setLoading(true);
       
-      // Fetch workflows with optional department filter
+      // Fetch ongoing workflows (exclude completed and cancelled) with optional department filter
       const departmentParam = department ? `&department=${department}` : '';
       const workflowsResponse = await fetch(`/api/task-orchestration/workflows?limit=20${departmentParam}`);
       const workflowsData = await workflowsResponse.json();
-      setWorkflows(workflowsData);
+      
+      // Filter out completed and cancelled workflows on the client side
+      const ongoingWorkflows = workflowsData.filter(w => 
+        w.status !== 'completed' && w.status !== 'cancelled'
+      );
+      setWorkflows(ongoingWorkflows);
 
-      // Calculate stats
-      const activeWorkflows = workflowsData.filter(w => w.status === 'in_progress').length;
+      // Calculate stats - fetch all workflows for total counts
+      const allWorkflowsResponse = await fetch(`/api/task-orchestration/workflows?limit=200${departmentParam}`);
+      const allWorkflowsData = await allWorkflowsResponse.json();
+      const activeWorkflows = allWorkflowsData.filter(w => 
+        w.status !== 'completed' && w.status !== 'cancelled'
+      ).length;
       
       // Fetch all tasks for stats
       const tasksResponse = await fetch('/api/task-orchestration/tasks?limit=200');
@@ -70,7 +79,7 @@ export default function TaskOrchestrationDashboard({ department = null }) {
       const completedTasks = tasksData.filter(t => t.task_status === 'completed').length;
 
       setStats({
-        total_workflows: workflowsData.length,
+        total_workflows: allWorkflowsData.length,
         active_workflows: activeWorkflows,
         total_tasks: tasksData.length,
         completed_tasks: completedTasks
@@ -461,16 +470,16 @@ export default function TaskOrchestrationDashboard({ department = null }) {
       {/* Workflows List */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">Recent Workflows</h2>
-          <p className="text-sm text-gray-500 mt-1">View and manage active workflows</p>
+          <h2 className="text-xl font-bold text-gray-900">Active Workflows</h2>
+          <p className="text-sm text-gray-500 mt-1">Current workflows (draft, active, in progress, blocked)</p>
         </div>
         <div className="p-6">
           <div className="space-y-3">
             {workflows.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Workflow size={48} className="mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No workflows yet</p>
-                <p className="text-sm mt-1">Create your first workflow to get started</p>
+                <p className="text-lg font-medium">No active workflows</p>
+                <p className="text-sm mt-1">Create a workflow to get started</p>
               </div>
             ) : (
               workflows.map((workflow) => (
