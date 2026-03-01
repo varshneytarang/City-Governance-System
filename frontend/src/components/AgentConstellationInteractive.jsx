@@ -277,10 +277,10 @@ const AgentConstellationInteractive = ({ reducedMotion = false }) => {
                     <motion.line
                       x1="170" y1="107"
                       x2={170 - pos.x} y2={107 - pos.y}
-                      stroke={isHovered ? agent.color : 'rgba(96, 165, 250, 0.3)'}
-                      strokeWidth={isHovered ? 2.5 : 1}
+                      stroke={isHovered ? agent.color : 'rgba(100, 116, 139, 0.4)'}
+                      strokeWidth={isHovered ? 2.5 : 1.5}
                       strokeDasharray={isHovered ? '0' : '4 4'}
-                      animate={{ opacity: isHovered ? 1 : 0.5 }}
+                      animate={{ opacity: isHovered ? 1 : 0.7 }}
                       transition={{ duration: 0.3 }}
                     />
                   </svg>

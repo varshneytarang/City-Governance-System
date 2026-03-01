@@ -61,8 +61,12 @@ else:
 def get_db_connection():
     """Get database connection"""
     if DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL, sslmode="require")
-    return psycopg2.connect(**DB_CONFIG)
+        # Check if it's a localhost connection
+        if "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
+            return psycopg2.connect(DATABASE_URL, sslmode="prefer")
+        else:
+            return psycopg2.connect(DATABASE_URL, sslmode="require")
+    return psycopg2.connect(**DB_CONFIG, sslmode="prefer")
 
 
 # ==================== Password Hashing ====================

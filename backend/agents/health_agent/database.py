@@ -28,7 +28,10 @@ class HealthDatabaseConnection:
             # Prefer DATABASE_URL from Railway
             database_url = os.getenv("DATABASE_URL") or os.getenv("HEALTH_DATABASE_URL")
             if database_url:
-                self.conn = psycopg2.connect(database_url, sslmode="require")
+                if "localhost" in database_url or "127.0.0.1" in database_url:
+                    self.conn = psycopg2.connect(database_url, sslmode="prefer")
+                else:
+                    self.conn = psycopg2.connect(database_url, sslmode="require")
                 logger.info(f"✓ Connected to health database via DATABASE_URL")
             else:
                 # Fallback to individual env vars (local development only)
@@ -37,7 +40,8 @@ class HealthDatabaseConnection:
                     port=settings.DB_PORT,
                     database=settings.DB_NAME,
                     user=settings.DB_USER,
-                    password=settings.DB_PASSWORD
+                    password=settings.DB_PASSWORD,
+                    sslmode="prefer"
                 )
                 logger.info(f"✓ Connected to health database: {settings.DB_NAME}@{settings.DB_HOST}:{settings.DB_PORT}")
             

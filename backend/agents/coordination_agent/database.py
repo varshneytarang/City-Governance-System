@@ -35,18 +35,25 @@ class CoordinationDatabase:
         """Establish database connection"""
         import os
         try:
-            # Use DATABASE_URL from Railway (mandatory)
+            # Use DATABASE_URL from Railway or construct from env vars
             database_url = os.getenv("DATABASE_URL")
             if database_url:
-                self.conn = psycopg2.connect(database_url, sslmode="require")
+                # Check if it's a localhost connection
+                if "localhost" in database_url or "127.0.0.1" in database_url:
+                    # Local development - SSL not required
+                    self.conn = psycopg2.connect(database_url, sslmode="prefer")
+                else:
+                    # Production (Railway) - SSL required
+                    self.conn = psycopg2.connect(database_url, sslmode="require")
             else:
                 # Fallback to individual env vars (local development only)
                 self.conn = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
+                    host=os.getenv("DB_HOST", "localhost"),
                     port=int(os.getenv("DB_PORT", "5432")),
                     dbname=os.getenv("DB_NAME"),
                     user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
+                    password=os.getenv("DB_PASSWORD"),
+                    sslmode="prefer"  # Prefer SSL but allow non-SSL for local dev
                 )
             self.conn.autocommit = True
             logger.info("✓ Database connection established")

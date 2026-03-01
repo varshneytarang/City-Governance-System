@@ -1,605 +1,635 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AgentConstellationInteractive from './AgentConstellationInteractive'
-import { Activity, Clock, CheckCircle, AlertTriangle, TrendingUp, Settings, Home } from 'lucide-react'
+import { 
+  FileText, DollarSign, Users, Shield, Database, BarChart3, 
+  Bell, Calendar, Clock, CheckCircle, AlertCircle, TrendingUp,
+  Home, Settings, ArrowUp, ArrowDown
+} from 'lucide-react'
 
 const Dashboard = ({ reducedMotion = false }) => {
   const navigate = useNavigate()
-  const [selectedTimeframe, setSelectedTimeframe] = useState('24h')
-  const [hoveredStat, setHoveredStat] = useState(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [selectedDepartment, setSelectedDepartment] = useState('all')
 
-  const stats = [
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Subtle fade in animation
+  const fadeIn = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4, ease: 'easeOut' }
+    }
+  }
+
+  // Key Performance Indicators
+  const kpis = [
     { 
-      label: 'Active Tasks', 
+      label: 'Active Requests', 
       value: '2,847', 
-      change: '+12%', 
-      positive: true, 
-      icon: Activity,
-      color: '#3b82f6'
+      change: +12.5,
+      icon: FileText,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    { 
+      label: 'Resolved Today', 
+      value: '1,234', 
+      change: +8.3,
+      icon: CheckCircle,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
     },
     { 
       label: 'Avg Response Time', 
-      value: '1.2s', 
-      change: '-8%', 
-      positive: true, 
+      value: '1.2 hrs', 
+      change: -15.2,
       icon: Clock,
-      color: '#14b8a6'
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50'
     },
     { 
-      label: 'Completed Today', 
-      value: '1,234', 
-      change: '+23%', 
-      positive: true, 
-      icon: CheckCircle,
-      color: '#10b981'
-    },
-    { 
-      label: 'Alerts', 
-      value: '3', 
-      change: '-45%', 
-      positive: true, 
-      icon: AlertTriangle,
-      color: '#f59e0b'
+      label: 'Compliance Rate', 
+      value: '98.4%', 
+      change: +2.1,
+      icon: Shield,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50'
     },
   ]
 
-  const recentActivity = [
-    { id: 1, agent: 'Water', action: 'Pipeline inspection completed', time: '2 min ago', status: 'success' },
-    { id: 2, agent: 'Fire', action: 'Emergency drill scheduled', time: '15 min ago', status: 'info' },
-    { id: 3, agent: 'Health', action: 'Vaccination drive initiated', time: '1 hour ago', status: 'success' },
-    { id: 4, agent: 'Finance', action: 'Budget review pending', time: '2 hours ago', status: 'warning' },
-    { id: 5, agent: 'Engineering', action: 'Road repair authorized', time: '3 hours ago', status: 'success' },
+  // Department Statistics
+  const departments = [
+    { name: 'Water', requests: 487, resolved: 452, pending: 35, budget: 92 },
+    { name: 'Fire', requests: 256, resolved: 241, pending: 15, budget: 88 },
+    { name: 'Health', requests: 623, resolved: 587, pending: 36, budget: 94 },
+    { name: 'Engineering', requests: 834, resolved: 789, pending: 45, budget: 91 },
+    { name: 'Finance', requests: 412, resolved: 398, pending: 14, budget: 96 },
+    { name: 'Sanitation', requests: 235, resolved: 224, pending: 11, budget: 89 },
   ]
 
-  // Sliding animation variants
-  const slideDownVariants = {
-    hidden: { opacity: 0, y: -60 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        type: 'spring',
-        stiffness: 100,
-        damping: 15,
-        mass: 0.8
-      }
-    }
+  // Recent Decisions/Approvals
+  const recentDecisions = [
+    { id: 1, title: 'Water Pipeline Repair - Zone 4', department: 'Water', status: 'Approved', time: '10 min ago', priority: 'High' },
+    { id: 2, title: 'Health Inspection Schedule', department: 'Health', status: 'Approved', time: '1 hr ago', priority: 'Medium' },
+    { id: 3, title: 'Budget Reallocation Q1', department: 'Finance', status: 'Pending', time: '2 hrs ago', priority: 'High' },
+    { id: 4, title: 'Fire Safety Drill Plan', department: 'Fire', status: 'Approved', time: '3 hrs ago', priority: 'Low' },
+    { id: 5, title: 'Road Maintenance Request', department: 'Engineering', status: 'Under Review', time: '4 hrs ago', priority: 'Medium' },
+  ]
+
+  // System Health Metrics
+  const systemMetrics = [
+    { label: 'Database', value: 98, status: 'Operational', color: 'bg-green-500' },
+    { label: 'API Services', value: 100, status: 'Operational', color: 'bg-green-500' },
+    { label: 'Agent Network', value: 96, status: 'Operational', color: 'bg-green-500' },
+    { label: 'Processing Queue', value: 87, status: 'Normal', color: 'bg-blue-500' },
+  ]
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false 
+    })
   }
 
-  const slideUpVariants = {
-    hidden: { opacity: 0, y: 60 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        type: 'spring',
-        stiffness: 100,
-        damping: 15,
-        mass: 0.8
-      }
-    }
-  }
-
-  const slideLeftVariants = {
-    hidden: { opacity: 0, x: -60 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { 
-        type: 'spring',
-        stiffness: 100,
-        damping: 15
-      }
-    }
-  }
-
-  const slideRightVariants = {
-    hidden: { opacity: 0, x: 60 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { 
-        type: 'spring',
-        stiffness: 100,
-        damping: 15
-      }
-    }
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#1e3a5f] to-[#0f172a] relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full"
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 relative">
+      {/* Subtle decorative elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-slate-200/20 rounded-full blur-3xl" />
+      </div>
+
+      {/* Subtle grid pattern */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02]">
+        <div 
+          className="absolute inset-0"
           style={{
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-            filter: 'blur(80px)',
+            backgroundImage: 'radial-gradient(circle at 2px 2px, rgb(148 163 184) 1px, transparent 0)',
+            backgroundSize: '48px 48px'
           }}
-          animate={{
-            x: [0, 50, 0],
-            y: [0, 30, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%)',
-            filter: 'blur(90px)',
-          }}
-          animate={{
-            x: [0, -40, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.15, 1],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
       {/* Header */}
-      <motion.header 
-        className="border-b border-white/5 bg-[#0a0e1a]/90 backdrop-blur-xl sticky top-0 z-50 shadow-2xl"
-        variants={slideDownVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50 relative">
+        <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
+            {/* Left Section */}
             <div className="flex items-center gap-4">
               <motion.button 
                 onClick={() => navigate('/')}
-                className="p-2 rounded-lg bg-gradient-to-br from-[#1e3a5f] to-[#2c5282] text-gray-300 hover:text-white transition-all flex items-center gap-2 border border-white/10 hover:border-[#d4af37]/50"
-                title="Back to Home"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <Home size={20} />
+                <Home size={18} />
                 <span className="text-sm font-medium">Home</span>
               </motion.button>
-              <div className="h-8 w-px bg-white/10" />
+              
+              <div className="h-8 w-px bg-gray-300" />
+              
               <div>
-                <motion.h1 
-                  className="text-2xl font-bold text-white mb-1"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                >
-                  Agent Dashboard
-                </motion.h1>
-                <motion.p 
-                  className="text-sm text-gray-400"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                >
-                  Real-time system monitoring & control
-                </motion.p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  City Governance Dashboard
+                </h1>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Multi-Agent Coordination System
+                </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* Timeframe selector */}
-              <div className="flex gap-2 bg-[#1e3a5f]/30 rounded-lg p-1 border border-white/5">
-                {['1h', '24h', '7d', '30d'].map((tf, index) => (
-                  <motion.button
-                    key={tf}
-                    onClick={() => setSelectedTimeframe(tf)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all relative ${
-                      selectedTimeframe === tf
-                        ? 'text-white'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.05 }}
-                  >
-                    {selectedTimeframe === tf && (
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-[#3b82f6] to-[#2563eb] rounded-md"
-                        layoutId="timeframeBackground"
-                        style={{ boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)' }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-10">{tf}</span>
-                  </motion.button>
-                ))}
+            {/* Right Section */}
+            <div className="flex items-center gap-6">
+              {/* Date & Time */}
+              <div className="text-right">
+                <div className="text-sm font-semibold text-gray-900">{formatTime(currentTime)}</div>
+                <div className="text-xs text-gray-600">{formatDate(currentTime)}</div>
               </div>
-
+              
+              <div className="h-8 w-px bg-gray-300" />
+              
+              {/* Notifications */}
               <motion.button 
-                className="p-2 rounded-lg bg-gradient-to-br from-[#1e3a5f] to-[#2c5282] text-gray-300 hover:text-white transition-all border border-white/10 hover:border-[#d4af37]/50"
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Bell size={20} />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </motion.button>
+              
+              {/* Settings */}
+              <motion.button 
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <Settings size={20} />
               </motion.button>
             </div>
           </div>
         </div>
-      </motion.header>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon
-            const isHovered = hoveredStat === index
-            return (
-              <motion.div
-                key={stat.label}
-                variants={slideUpVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.7 + index * 0.1 }}
-                onMouseEnter={() => setHoveredStat(index)}
-                onMouseLeave={() => setHoveredStat(null)}
-                className="bg-gradient-to-br from-[#1e3a5f]/40 to-[#0a0e1a]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300 group cursor-pointer relative overflow-hidden"
-                whileHover={{ 
-                  scale: 1.05, 
-                  y: -8,
-                  boxShadow: `0 20px 40px ${stat.color}40`,
-                }}
-              >
-                {/* Glow effect on hover */}
-                <motion.div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{
-                    background: `radial-gradient(circle at 50% 0%, ${stat.color}15, transparent 70%)`,
-                  }}
-                />
-                
-                <div className="flex items-start justify-between mb-4 relative z-10">
-                  <motion.div 
-                    className="p-3 rounded-xl relative"
-                    style={{ 
-                      background: `${stat.color}20`,
-                      boxShadow: isHovered ? `0 8px 30px ${stat.color}50` : `0 4px 20px ${stat.color}30`
-                    }}
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                  >
-                    <Icon size={24} style={{ color: stat.color }} />
-                  </motion.div>
-                  <motion.div
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                      stat.positive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.8 + index * 0.1, type: 'spring', stiffness: 300 }}
-                  >
-                    {stat.change}
-                  </motion.div>
+      <div className="max-w-[1800px] mx-auto px-6 py-6 space-y-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+          {kpis.map((kpi, index) => (
+            <motion.div
+              key={kpi.label}
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: index * 0.05 }}
+              className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all"
+            >
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2.5 rounded-lg ${kpi.bgColor} ring-2 ring-white shadow-sm`}>
+                    <kpi.icon className={`${kpi.color}`} size={20} />
+                  </div>
+                  <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+                    kpi.change > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                  }`}>
+                    {kpi.change > 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                    {Math.abs(kpi.change)}%
+                  </div>
                 </div>
-                <div className="relative z-10">
-                  <motion.p 
-                    className="text-gray-400 text-sm mb-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.9 + index * 0.1 }}
-                  >
-                    {stat.label}
-                  </motion.p>
-                  <motion.p 
-                    className="text-3xl font-bold text-white"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1 + index * 0.1, type: 'spring' }}
-                  >
-                    {stat.value}
-                  </motion.p>
-                </div>
-                
-                {/* Trend indicator */}
-                <motion.div 
-                  className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 relative z-10"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.1 + index * 0.1 }}
-                >
-                  <TrendingUp size={14} className="text-green-400" />
-                  <span className="text-xs text-gray-500">vs last period</span>
-                </motion.div>
-
-                {/* Shimmer effect */}
-                {isHovered && (
-                  <motion.div
-                    className="absolute inset-0 -translate-x-full"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-                    }}
-                    animate={{ x: ['0%', '200%'] }}
-                    transition={{ duration: 1.5, ease: 'easeInOut' }}
-                  />
-                )}
-              </motion.div>
-            )
-          })}
+                <div className="text-xs text-gray-600 font-medium mb-1">{kpi.label}</div>
+                <div className="text-2xl font-bold text-gray-900">{kpi.value}</div>
+              </div>
+              
+              {/* Subtle accent line */}
+              <div className={`h-1 ${kpi.bgColor}`} />
+            </motion.div>
+          ))}
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Agent Constellation - Takes 2 columns */}
-          <div className="lg:col-span-2">
-            <motion.div
-              variants={slideLeftVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 1.2 }}
-              className="bg-gradient-to-br from-[#1e3a5f]/40 to-[#0a0e1a]/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all duration-300 shadow-2xl group"
-              whileHover={{ scale: 1.01, y: -4 }}
-            >
-              <div className="p-6 border-b border-white/10 relative overflow-hidden">
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-[#3b82f6]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-                  initial={false}
-                />
-                <motion.h2 
-                  className="text-xl font-bold text-white mb-1 relative z-10"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.3 }}
-                >
-                  Agent Network
-                </motion.h2>
-                <motion.p 
-                  className="text-sm text-gray-400 relative z-10"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.4 }}
-                >
-                  Live coordination & monitoring
-                </motion.p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Agent Network - Spans 2 columns */}
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+          >
+            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50/50 to-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Agent Network</h2>
+                  <p className="text-sm text-gray-600">Real-time coordination monitoring</p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full shadow-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-semibold text-green-700">All Agents Active</span>
+                </div>
               </div>
-              
-              {/* Constellation - Adjusted for dashboard */}
-              <motion.div 
-                className="relative" 
-                style={{ height: '600px' }}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.5, type: 'spring', stiffness: 100 }}
-              >
-                <AgentConstellationInteractive reducedMotion={reducedMotion} />
-              </motion.div>
-            </motion.div>
-          </div>
+            </div>
+            
+            {/* Agent Constellation - Keep animation exactly as is */}
+            <div style={{ height: '600px', background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)' }}>
+              <AgentConstellationInteractive reducedMotion={reducedMotion} />
+            </div>
+          </motion.div>
 
-          {/* Recent Activity - Takes 1 column */}
-          <div>
-            <motion.div
-              variants={slideRightVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 1.2 }}
-              className="bg-gradient-to-br from-[#1e3a5f]/40 to-[#0a0e1a]/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all duration-300 shadow-2xl group"
-              whileHover={{ scale: 1.01, y: -4 }}
-            >
-              <div className="p-6 border-b border-white/10 relative overflow-hidden">
+          {/* Recent Decisions */}
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.25 }}
+            className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+          >
+            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50/50 to-white">
+              <h2 className="text-lg font-bold text-gray-900">Recent Decisions</h2>
+              <p className="text-sm text-gray-600">Latest approvals & reviews</p>
+            </div>
+            
+            <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
+              {recentDecisions.map((decision, index) => (
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-[#d4af37]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-                  initial={false}
-                />
-                <motion.h2 
-                  className="text-xl font-bold text-white mb-1 relative z-10"
+                  key={decision.id}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.3 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                  className="relative group"
                 >
-                  Recent Activity
-                </motion.h2>
-                <motion.p 
-                  className="text-sm text-gray-400 relative z-10"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.4 }}
-                >
-                  Latest agent actions
-                </motion.p>
-              </div>
-              
-              <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
-                {recentActivity.map((activity, index) => (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ 
-                      delay: 1.5 + index * 0.1,
-                      type: 'spring',
-                      stiffness: 150,
-                      damping: 15
-                    }}
-                    className="p-4 rounded-xl bg-gradient-to-br from-[#1e3a5f]/30 to-[#0a0e1a]/50 border border-white/5 hover:border-white/20 transition-all group/item cursor-pointer relative overflow-hidden"
-                    whileHover={{ 
-                      scale: 1.02, 
-                      x: 4,
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
-                    }}
-                  >
-                    {/* Hover glow */}
-                    <motion.div
-                      className="absolute inset-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
-                      style={{
-                        background: activity.status === 'success' 
-                          ? 'radial-gradient(circle at top right, rgba(34, 197, 94, 0.1), transparent 70%)'
-                          : activity.status === 'warning'
-                          ? 'radial-gradient(circle at top right, rgba(251, 191, 36, 0.1), transparent 70%)'
-                          : 'radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 70%)',
-                      }}
-                    />
-                    
-                    <div className="flex items-start justify-between mb-2 relative z-10">
-                      <div className="flex items-center gap-2">
-                        <motion.div 
-                          className={`w-2 h-2 rounded-full ${
-                            activity.status === 'success' ? 'bg-green-400' :
-                            activity.status === 'warning' ? 'bg-yellow-400' :
-                            'bg-blue-400'
-                          }`}
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        />
-                        <span className="text-sm font-semibold text-white">{activity.agent}</span>
+                  {/* Timeline dot and line */}
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-300 to-blue-200" />
+                  <div className={`absolute left-[-3px] top-6 w-2.5 h-2.5 rounded-full ${
+                    decision.status === 'Approved' ? 'bg-green-500' :
+                    decision.status === 'Pending' ? 'bg-amber-500' : 'bg-blue-500'
+                  } ring-4 ring-white`} />
+                  
+                  {/* Card content */}
+                  <div className="ml-6 p-4 rounded-lg bg-gradient-to-br from-white to-slate-50 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                          {decision.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <span className="font-medium">{decision.department}</span>
+                          <span>•</span>
+                          <span>{decision.time}</span>
+                        </div>
                       </div>
-                      <motion.span 
-                        className="text-xs text-gray-500"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.6 + index * 0.1 }}
-                      >
-                        {activity.time}
-                      </motion.span>
                     </div>
-                    <p className="text-sm text-gray-400 pl-4 relative z-10">{activity.action}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                          decision.status === 'Approved' 
+                            ? 'bg-green-100 text-green-700 border border-green-200' 
+                            : decision.status === 'Pending'
+                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : 'bg-blue-100 text-blue-700 border border-blue-200'
+                        }`}>
+                          {decision.status}
+                        </span>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                          decision.priority === 'High' 
+                            ? 'bg-red-100 text-red-700 border border-red-200' 
+                            : decision.priority === 'Medium'
+                            ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}>
+                          {decision.priority}
+                        </span>
+                      </div>
+                      
+                      {/* Visual indicator */}
+                      <div className="flex items-center gap-1">
+                        {[...Array(decision.priority === 'High' ? 3 : decision.priority === 'Medium' ? 2 : 1)].map((_, i) => (
+                          <div key={i} className={`w-1 h-4 rounded-full ${
+                            decision.priority === 'High' ? 'bg-red-400' :
+                            decision.priority === 'Medium' ? 'bg-orange-400' : 'bg-gray-400'
+                          }`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
 
-        {/* System Health - Full Width */}
-        <motion.div
-          variants={slideDownVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 1.8 }}
-          className="mt-8 bg-gradient-to-br from-[#1e3a5f]/40 to-[#0a0e1a]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300 shadow-2xl group relative overflow-hidden"
-          whileHover={{ scale: 1.01, y: -4 }}
-        >
-          {/* Background glow */}
+        {/* Department Performance & System Health */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Department Performance */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/5 via-transparent to-[#d4af37]/5 opacity-0 group-hover:opacity-100 transition-opacity"
-            initial={false}
-          />
-
-          <div className="flex items-center justify-between mb-6 relative z-10">
-            <div>
-              <motion.h2 
-                className="text-xl font-bold text-white mb-1"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.9 }}
-              >
-                System Health
-              </motion.h2>
-              <motion.p 
-                className="text-sm text-gray-400"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2.0 }}
-              >
-                Overall performance metrics
-              </motion.p>
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.3 }}
+            className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm"
+          >
+            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50/50 to-white">
+              <h2 className="text-lg font-bold text-gray-900">Department Performance</h2>
+              <p className="text-sm text-gray-600">Request resolution metrics</p>
             </div>
-            <motion.div 
-              className="flex items-center gap-2"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 2.1, type: 'spring', stiffness: 200 }}
-            >
-              <motion.div 
-                className="w-3 h-3 rounded-full bg-green-400"
-                animate={{ 
-                  scale: [1, 1.3, 1],
-                  opacity: [1, 0.7, 1]
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              <span className="text-sm font-medium text-green-400">All Systems Operational</span>
-            </motion.div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-            {[
-              { label: 'CPU Usage', value: 42, color: 'from-blue-500 to-blue-600', delay: 2.2 },
-              { label: 'Memory', value: 67, color: 'from-emerald-500 to-emerald-600', delay: 2.3 },
-              { label: 'Network', value: 23, color: 'from-purple-500 to-purple-600', delay: 2.4 }
-            ].map((metric, index) => (
-              <motion.div 
-                key={metric.label}
-                className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-[#1e3a5f]/20 to-transparent border border-white/5 hover:border-white/10 transition-all group/metric"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: metric.delay, type: 'spring' }}
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="flex items-center justify-between text-sm">
-                  <motion.span 
-                    className="text-gray-400"
-                    whileHover={{ color: '#ffffff' }}
-                  >
-                    {metric.label}
-                  </motion.span>
-                  <motion.span 
-                    className="font-semibold text-white"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: metric.delay + 0.2 }}
-                  >
-                    {metric.value}%
-                  </motion.span>
-                </div>
-                <div className="h-2.5 bg-[#0a0e1a]/50 rounded-full overflow-hidden border border-white/5">
-                  <motion.div
-                    className={`h-full bg-gradient-to-r ${metric.color} relative origin-left`}
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: metric.value / 100 }}
-                    transition={{ 
-                      duration: 1.5, 
-                      delay: metric.delay + 0.3,
-                      type: 'spring',
-                      stiffness: 100
-                    }}
-                    style={{
-                      boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
-                      width: '100%'
-                    }}
-                  >
-                    {/* Animated shimmer */}
+            
+            <div className="p-5">
+              <div className="grid grid-cols-2 gap-4">
+                {departments.map((dept, index) => {
+                  const percentage = Math.round((dept.resolved / dept.requests) * 100)
+                  const circumference = 2 * Math.PI * 36
+                  const strokeDashoffset = circumference - (percentage / 100) * circumference
+                  
+                  return (
                     <motion.div
-                      className="absolute inset-0"
-                      style={{
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                      }}
-                      animate={{ x: ['-100%', '200%'] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                  </motion.div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+                      key={dept.name}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.35 + index * 0.05 }}
+                      className="relative p-4 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Circular Progress */}
+                        <div className="relative flex-shrink-0">
+                          <svg className="transform -rotate-90" width="80" height="80">
+                            {/* Background circle */}
+                            <circle
+                              cx="40"
+                              cy="40"
+                              r="36"
+                              stroke="rgb(226 232 240)"
+                              strokeWidth="6"
+                              fill="none"
+                            />
+                            {/* Progress circle */}
+                            <motion.circle
+                              cx="40"
+                              cy="40"
+                              r="36"
+                              stroke="url(#gradient-${dept.name})"
+                              strokeWidth="6"
+                              fill="none"
+                              strokeLinecap="round"
+                              initial={{ strokeDashoffset: circumference }}
+                              animate={{ strokeDashoffset }}
+                              transition={{ duration: 1, delay: 0.4 + index * 0.05, ease: "easeOut" }}
+                              style={{
+                                strokeDasharray: circumference,
+                              }}
+                            />
+                            <defs>
+                              <linearGradient id={`gradient-${dept.name}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor={
+                                  percentage >= 95 ? '#10b981' : 
+                                  percentage >= 90 ? '#3b82f6' : '#f59e0b'
+                                } />
+                                <stop offset="100%" stopColor={
+                                  percentage >= 95 ? '#059669' : 
+                                  percentage >= 90 ? '#2563eb' : '#d97706'
+                                } />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          
+                          {/* Center percentage */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-lg font-bold text-gray-900">{percentage}%</span>
+                          </div>
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                            {dept.name}
+                          </h3>
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Resolved</span>
+                              <span className="font-semibold text-green-600">{dept.resolved}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Pending</span>
+                              <span className="font-semibold text-amber-600">{dept.pending}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Total</span>
+                              <span className="font-semibold text-gray-900">{dept.requests}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status indicator */}
+                      <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${
+                        percentage >= 95 ? 'bg-green-500' :
+                        percentage >= 90 ? 'bg-blue-500' : 'bg-amber-500'
+                      } animate-pulse`} />
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
 
-      {/* Custom Scrollbar Styles */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.3);
-        }
-      `}</style>
+          {/* System Health */}
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.35 }}
+            className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm"
+          >
+            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-green-50/50 to-white">
+              <h2 className="text-lg font-bold text-gray-900">System Health</h2>
+              <p className="text-sm text-gray-600">Infrastructure status</p>
+            </div>
+            
+            <div className="p-5 space-y-3">
+              {systemMetrics.map((metric, index) => {
+                const radius = 24
+                const circumference = 2 * Math.PI * radius
+                const strokeDashoffset = circumference - (metric.value / 100) * circumference
+                
+                return (
+                  <motion.div
+                    key={metric.label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + index * 0.05 }}
+                    className="relative p-4 rounded-xl bg-gradient-to-r from-white to-slate-50 border border-gray-100 hover:border-green-200 hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Circular indicator */}
+                      <div className="relative flex-shrink-0">
+                        <svg className="transform -rotate-90" width="56" height="56">
+                          {/* Background circle */}
+                          <circle
+                            cx="28"
+                            cy="28"
+                            r={radius}
+                            stroke="rgb(226 232 240)"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          {/* Progress circle */}
+                          <motion.circle
+                            cx="28"
+                            cy="28"
+                            r={radius}
+                            stroke={metric.value >= 95 ? '#10b981' : metric.value >= 85 ? '#3b82f6' : '#f59e0b'}
+                            strokeWidth="4"
+                            fill="none"
+                            strokeLinecap="round"
+                            initial={{ strokeDashoffset: circumference }}
+                            animate={{ strokeDashoffset }}
+                            transition={{ duration: 1, delay: 0.45 + index * 0.05, ease: "easeOut" }}
+                            style={{
+                              strokeDasharray: circumference,
+                            }}
+                          />
+                        </svg>
+                        
+                        {/* Center icon */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Database size={20} className={
+                            metric.value >= 95 ? 'text-green-500' : 
+                            metric.value >= 85 ? 'text-blue-500' : 'text-amber-500'
+                          } />
+                        </div>
+                      </div>
+                      
+                      {/* Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-gray-900">{metric.label}</span>
+                          <span className="text-lg font-bold text-gray-900">{metric.value}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            metric.value >= 95 ? 'bg-green-100 text-green-700' :
+                            metric.value >= 85 ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {metric.status}
+                          </span>
+                          
+                          {/* Mini chart/sparkline */}
+                          <div className="flex items-end gap-0.5 h-5">
+                            {[65, 72, 68, 75, 80, 85, metric.value].map((val, i) => (
+                              <motion.div
+                                key={i}
+                                className={metric.value >= 95 ? 'bg-green-400' : metric.value >= 85 ? 'bg-blue-400' : 'bg-amber-400'}
+                                initial={{ height: 0 }}
+                                animate={{ height: `${(val / 100) * 100}%` }}
+                                transition={{ duration: 0.5, delay: 0.5 + index * 0.05 + i * 0.05 }}
+                                style={{ width: '3px', borderRadius: '2px' }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+              
+              {/* Budget Utilization Summary */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="relative p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Large circular progress */}
+                    <div className="relative flex-shrink-0">
+                      <svg className="transform -rotate-90" width="80" height="80">
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="rgb(209 250 229)"
+                          strokeWidth="6"
+                          fill="none"
+                        />
+                        <motion.circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="url(#gradient-budget)"
+                          strokeWidth="6"
+                          fill="none"
+                          strokeLinecap="round"
+                          initial={{ strokeDashoffset: 2 * Math.PI * 36 }}
+                          animate={{ strokeDashoffset: 2 * Math.PI * 36 - (91.7 / 100) * 2 * Math.PI * 36 }}
+                          transition={{ duration: 1.2, delay: 0.65, ease: "easeOut" }}
+                          style={{
+                            strokeDasharray: 2 * Math.PI * 36,
+                          }}
+                        />
+                        <defs>
+                          <linearGradient id="gradient-budget" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#10b981" />
+                            <stop offset="100%" stopColor="#059669" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <DollarSign size={28} className="text-emerald-600" />
+                      </div>
+                    </div>
+                    
+                    {/* Budget info */}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-bold text-gray-900">Budget Utilization</span>
+                        <span className="text-2xl font-bold text-emerald-600">91.7%</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">Across all departments (FY 2026)</p>
+                      
+                      {/* Department budget mini-indicators */}
+                      <div className="flex items-center gap-1">
+                        {departments.map((dept) => (
+                          <div
+                            key={dept.name}
+                            className="relative group/dept"
+                            style={{ flex: dept.budget }}
+                          >
+                            <div 
+                              className="h-1.5 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all group-hover/dept:h-2"
+                              title={`${dept.name}: ${dept.budget}%`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   )
 }
