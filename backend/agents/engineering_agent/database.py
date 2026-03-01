@@ -28,7 +28,10 @@ class DatabaseConnection:
             # Use DATABASE_URL from Railway (mandatory)
             database_url = os.getenv("DATABASE_URL")
             if database_url:
-                self.conn = psycopg2.connect(database_url, sslmode="require")
+                if "localhost" in database_url or "127.0.0.1" in database_url:
+                    self.conn = psycopg2.connect(database_url, sslmode="prefer")
+                else:
+                    self.conn = psycopg2.connect(database_url, sslmode="require")
                 logger.info(f"✓ Connected to database (Engineering) via DATABASE_URL")
             else:
                 # Fallback to individual env vars (local development only)

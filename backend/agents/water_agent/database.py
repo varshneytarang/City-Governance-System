@@ -25,10 +25,14 @@ class DatabaseConnection:
         """Establish database connection"""
         import os
         try:
-            # Use DATABASE_URL from Railway (mandatory)
+            # Use DATABASE_URL from Railway or local
             database_url = os.getenv("DATABASE_URL")
             if database_url:
-                self.conn = psycopg2.connect(database_url, sslmode="require")
+                # Check if it's localhost
+                if "localhost" in database_url or "127.0.0.1" in database_url:
+                    self.conn = psycopg2.connect(database_url, sslmode="prefer")
+                else:
+                    self.conn = psycopg2.connect(database_url, sslmode="require")
                 logger.info(f"✓ Connected via DATABASE_URL")
             else:
                 # Fallback to individual env vars (local development only)
@@ -37,7 +41,8 @@ class DatabaseConnection:
                     port=settings.DB_PORT,
                     database=settings.DB_NAME,
                     user=settings.DB_USER,
-                    password=settings.DB_PASSWORD
+                    password=settings.DB_PASSWORD,
+                    sslmode="prefer"
                 )
                 logger.info(f"✓ Connected to {settings.DB_NAME}")
         except psycopg2.Error as e:
